@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Jukebox OBIE/X1 - Search Kiosk</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles/grid.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111;
+            width: 1280px;
+            height: 1024px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #jukebox-container {
+            position: relative;
+            width: 1280px;
+            height: 1024px;
+            overflow: hidden;
+        }
+        
+        /* Media container for animations */
+        #media-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1280px;
+            height: 1024px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+        
+        /* Animation elements */
+        .media-element {
+            position: absolute;
+            height: 100%;
+            width: auto;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%); /* Center horizontally */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+        
+        /* Active element shows fully */
+        .media-element.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        
+        /* Element being transitioned out */
+        .media-element.fade-out {
+            opacity: 0;
+            z-index: 1;
+        }
+        
+        /* Neon elements container */
+        #neon-element {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* The actual neon images */
+        .neon-bg, .neon-fg {
+            height: 100%;
+            width: auto;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .neon-fg {
+            opacity: 0;
+            /* No transition for snap effect */
+        }
+        
+        /* Ensure video player container is hidden in this view */
+        #player-container {
+            display: none !important;
+        }
+        
+        /* Search button styles */
+        #search-button {
+            position: fixed;
+            top: 920px; /* Position at bottom of 1024px height */
+            left: 640px; /* Center horizontally in 1280px width */
+            transform: translate(-50%, -50%); /* Center the button */
+            width: 650px;
+            height: 80px;
+            margin: 40px;
+            background-color: rgba(0, 0, 0, 0.5); /* Black with 50% opacity */
+            color: rgba(255, 255, 255, 0.8); /* White text with 80% opacity */
+            font-weight: bold;
+            font-size: calc((650px - 36px) / 25); /* Dynamic text size with 18px margin on each side */
+            border: none;
+            cursor: pointer;
+            z-index: 99999; /* Ensure it's absolutely on top of all other elements */
+            font-family: Arial, sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            /* Dark red blurry border with 12px blur */
+            box-shadow: 0 0 12px 4px rgba(139, 0, 0, 0.6);
+            border-radius: 8px;
+            transition: all 0.1s ease;
+            padding: 0 18px; /* 18px horizontal margin for text */
+        }
+        
+        /* Hover effect removed as requested */
+        
+        #search-button:active {
+            transform: translate(-50%, -50%) scale(.95);
+        }
+    </style>
+</head>
+<body>
+    <div id="jukebox-container">
+        <!-- Media animation container -->
+        <div id="media-container">
+            <!-- Shield Crest Animation 2 -->
+            <video id="crest-animation2" class="media-element" loop muted playsInline>
+                <source src="/assets/Obie_Shield_Crest_Animation2.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            
+            <!-- Neon Element 1 -->
+            <div id="neon-element1" class="media-element">
+                <img src="/assets/Obie_NEON2.png" class="neon-bg" alt="Neon BG" />
+                <img src="/assets/Obie_NEON1.png" class="neon-fg" id="neon-fg1" alt="Neon FG" />
+            </div>
+            
+            <!-- Shield Crest Animation 1 -->
+            <video id="crest-animation1" class="media-element" loop muted playsInline>
+                <source src="/assets/Obie_Shield_Crest_Animation1.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            
+            <!-- Neon Element 2 (duplicate for second cycle) -->
+            <div id="neon-element2" class="media-element">
+                <img src="/assets/Obie_NEON2.png" class="neon-bg" alt="Neon BG" />
+                <img src="/assets/Obie_NEON1.png" class="neon-fg" id="neon-fg2" alt="Neon FG" />
+            </div>
+        </div>
+        
+        <!-- Message display for UI feedback -->
+        <div id="message-display"></div>
+        
+        <!-- Load normal main interface but hide video player -->
+        <div id="thumbnails-container"></div>
+        
+        <!-- React app mount point -->
+        <div id="search-root" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 100;"></div>
+        
+        <!-- Search button with updated styling -->
+        <button id="search-button">SEARCH ALL ARTISTS & SONGS</button>
+    </div>
+    
+    <script type="module">
+        // This script runs before any modules are loaded
+        console.log('Initializing Jukebox Search Kiosk with alternating media animations...');
+        
+        // Make API key available globally
+        window.YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+        
+        // Access the API key from import.meta.env
+        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+        
+        // Make it available globally
+        window.YOUTUBE_API_KEY = apiKey;
+        window.JUKEBOX_SEARCH_ONLY = true;
+        
+        // Media animation controller
+        class MediaAnimationController {
+            constructor() {
+                // Define the media elements in the sequence they should appear
+                this.mediaElements = [
+                    { id: 'crest-animation2', type: 'video', cycles: 4 },
+                    { id: 'neon-element1', type: 'neon', cycles: 4 },
+                    { id: 'crest-animation1', type: 'video', cycles: 4 },
+                    { id: 'neon-element2', type: 'neon', cycles: 4 }
+                ];
+                
+                // Initialize state
+                this.currentElementIndex = 0;
+                this.currentCycleCount = 0;
+                this.isTransitioning = false;
+                
+                // Neon elements need their own animation
+                this.neonFg1 = document.getElementById('neon-fg1');
+                this.neonFg2 = document.getElementById('neon-fg2');
+                
+                // Get DOM references to all elements
+                this.elements = this.mediaElements.map(item => ({
+                    ...item, 
+                    element: document.getElementById(item.id)
+                }));
+                
+                // Initialize videos
+                this.elements.forEach(item => {
+                    if (item.type === 'video' && item.element) {
+                        // Preload the video
+                        item.element.load();
+                    }
+                });
+            }
+            
+            // Start the animation sequence
+            start() {
+                console.log('Starting media animation sequence');
+                this.showCurrentElement();
+            }
+            
+            // Show the current element in the sequence
+            showCurrentElement() {
+                if (this.isTransitioning) return;
+                
+                const currentItem = this.elements[this.currentElementIndex];
+                const element = currentItem.element;
+                
+                if (!element) {
+                    console.error(`Element not found: ${currentItem.id}`);
+                    return;
+                }
+                
+                // Log start of new element set or continuing cycles
+                if (this.currentCycleCount === 0) {
+                    console.log(`FADE IN >>>> ${currentItem.id} (will repeat x ${currentItem.cycles} cycles)`);
+                } else {
+                    console.log(`Continuing ${currentItem.id}, cycle ${this.currentCycleCount + 1} of ${currentItem.cycles}`);
+                }
+                
+                // If this is the first cycle (cycle 0), fade in the element
+                if (this.currentCycleCount === 0) {
+                    // Hide all elements first
+                    this.elements.forEach(item => {
+                        if (item.element !== element) {
+                            item.element.classList.remove('active');
+                            item.element.classList.remove('fade-out');
+                        }
+                    });
+                    
+                    // Show current element with fade-in transition
+                    element.classList.add('active');
+                }
+                
+                // If it's a video, play it (possibly restart it for new cycles)
+                if (currentItem.type === 'video') {
+                    // Only reset video position on first cycle or if it ended
+                    if (this.currentCycleCount === 0 || element.ended) {
+                        element.currentTime = 0;
+                    }
+                    element.play().catch(e => console.error('Video play error:', e));
+                } 
+                // If it's a neon element, start its animation
+                else if (currentItem.type === 'neon') {
+                    const neonFg = currentItem.id === 'neon-element1' ? this.neonFg1 : this.neonFg2;
+                    this.animateNeon(neonFg);
+                }
+                
+                // Schedule the next cycle
+                const displayDuration = currentItem.type === 'video' ? 
+                    // For videos, use their duration (or 10s as fallback)
+                    (element.duration * 1000) || 10000 : 
+                    // For neon, use a fixed duration of 10 seconds per cycle
+                    10000;
+                
+                // Schedule transition to next cycle/element
+                setTimeout(() => this.transitionToNext(), displayDuration);
+            }
+            
+            // Transition to the next element or cycle
+            transitionToNext() {
+                const currentItem = this.elements[this.currentElementIndex];
+                const element = currentItem.element;
+                
+                // Increment cycle count
+                this.currentCycleCount++;
+                
+                // Check if we've completed all cycles for current element
+                const completedAllCycles = this.currentCycleCount >= currentItem.cycles;
+                
+                // Only do fade transition if moving to next element (not just next cycle)
+                if (completedAllCycles) {
+                    console.log(`<<<< FADE OUT ${currentItem.id} (completed ${currentItem.cycles} cycles)`);
+                    this.isTransitioning = true;
+                    
+                    // Start fade out transition
+                    if (element) {
+                        element.classList.add('fade-out');
+                        element.classList.remove('active');
+                        
+                        // If it's a video, pause it after fade
+                        if (currentItem.type === 'video') {
+                            setTimeout(() => {
+                                element.pause();
+                            }, 3000); // Pause after fade out completes
+                        }
+                    }
+                    
+                    // Move to next element
+                    this.currentElementIndex = (this.currentElementIndex + 1) % this.elements.length;
+                    this.currentCycleCount = 0;
+                    
+                    // Wait for transition to complete, then show next element
+                    setTimeout(() => {
+                        this.isTransitioning = false;
+                        this.showCurrentElement();
+                    }, 3000); // Match the CSS transition duration
+                } else {
+                    // No transition needed, just continue to next cycle of same element
+                    this.showCurrentElement();
+                }
+            }
+            
+            // Animate a neon foreground element with snap opacity changes
+            animateNeon(neonFg) {
+                if (!neonFg) return;
+                
+                const animate = () => {
+                    // DISPLAY LOOP BEGINS
+                    
+                    // Random values for animation (with adjusted parameters)
+                    const visibleTime = Math.random() * 0.3 + 0.1; // 0.1-0.4 seconds as requested
+                    const hiddenTime = Math.random() * 6 + 2; // 2-8 seconds
+                    const cycleTime = Math.random() * 6 + 6; // 6-12 seconds
+                    
+                    console.log(`Neon animation: Opacity=1.0 (100%), Visible=${visibleTime.toFixed(2)}s, Hidden=${hiddenTime.toFixed(2)}s, Next cycle in ${cycleTime.toFixed(2)}s`);
+                    
+                    // SNAP ON - Set opacity to fixed 100% immediately without transition
+                    neonFg.style.opacity = '1.0';
+                    
+                    // Hold visible for random time, then SNAP OFF
+                    setTimeout(() => {
+                        // SNAP OFF - Immediately hide
+                        neonFg.style.opacity = '0';
+                        
+                        // Start next cycle after cycle time
+                        setTimeout(animate, cycleTime * 1000);
+                    }, visibleTime * 1000);
+                };
+                
+                // Start the animation
+                animate();
+            }
+        }
+        
+        // Initialize and start animation when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const animationController = new MediaAnimationController();
+            // Slight delay to ensure everything is loaded
+            setTimeout(() => animationController.start(), 500);
+            
+            // Set up search button functionality
+            const searchButton = document.getElementById('search-button');
+            if (searchButton) {
+                searchButton.addEventListener('click', () => {
+                    console.log('Opening search dialog...');
+                    // This will trigger the search dialog from the main application
+                    // We're creating a custom event to communicate with the main app
+                    const searchEvent = new CustomEvent('jukeboxSearchRequested');
+                    window.dispatchEvent(searchEvent);
+                    
+                    // Also directly call the search function if it's available from the main app
+                    if (window.openSearchDialog) {
+                        window.openSearchDialog();
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <!-- Inline search functionality implementation -->
+    <script>
+        // Initialize search dialog function
+        window.openSearchDialog = function() {
+            console.log('Creating search dialog...');
+            
+            // Create a fade overlay instead of fading the entire body
+            const fadeOverlay = document.createElement('div');
+            fadeOverlay.style.position = 'fixed';
+            fadeOverlay.style.top = '50%';
+            fadeOverlay.style.left = '50%';
+            fadeOverlay.style.width = '1280px';
+            fadeOverlay.style.height = '1024px';
+            fadeOverlay.style.transform = 'translate(-50%, -50%)';
+            fadeOverlay.style.backgroundColor = 'black';
+            fadeOverlay.style.opacity = '0';
+            fadeOverlay.style.transition = 'opacity 1000ms ease';
+            fadeOverlay.style.zIndex = '99999';
+            document.body.appendChild(fadeOverlay);
+            
+            // Fade in the overlay
+            setTimeout(() => {
+                fadeOverlay.style.opacity = '1';
+            }, 50);
+            
+            // Delay showing the search dialog until fade out is complete
+            
+            setTimeout(() => {
+                // Create container for search UI
+                const searchContainer = document.createElement('div');
+                searchContainer.id = 'search-dialog-container';
+                searchContainer.style.position = 'fixed';
+                searchContainer.style.top = '50%';
+                searchContainer.style.left = '50%';
+                searchContainer.style.width = '1280px';
+                searchContainer.style.height = '1024px';
+                searchContainer.style.transform = 'translate(-50%, -50%)';
+                searchContainer.style.backgroundImage = "url('assets/1280x1024_Obie_Shield.png')";
+                searchContainer.style.backgroundSize = 'cover';
+                searchContainer.style.backgroundPosition = 'center center';
+                searchContainer.style.backgroundRepeat = 'no-repeat';
+                searchContainer.style.zIndex = '100000';
+                searchContainer.style.display = 'flex';
+                searchContainer.style.flexDirection = 'column';
+                searchContainer.style.alignItems = 'center';
+                searchContainer.style.justifyContent = 'center';
+                searchContainer.style.padding = '20px';
+                searchContainer.style.opacity = '0';
+                searchContainer.style.transition = 'opacity 1000ms ease';
+                document.body.appendChild(searchContainer);
+                
+                // Fade in the search container
+                setTimeout(() => {
+                    // Remove the fade overlay as the search container fades in
+                    searchContainer.style.opacity = '1';
+                    setTimeout(() => {
+                        if (document.body.contains(fadeOverlay)) {
+                            document.body.removeChild(fadeOverlay);
+                        }
+                    }, 500);
+                }, 50);
+            
+            // Create keyboard container
+            const keyboardContainer = document.createElement('div');
+            keyboardContainer.className = 'keyboard-container';
+            keyboardContainer.style.width = '800px';
+            keyboardContainer.style.maxWidth = '800px';
+            keyboardContainer.style.margin = '0 auto';
+            keyboardContainer.style.backgroundColor = '#222';
+            keyboardContainer.style.borderRadius = '8px';
+            keyboardContainer.style.padding = '20px';
+            keyboardContainer.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.3)';
+            keyboardContainer.style.position = 'relative';
+            searchContainer.appendChild(keyboardContainer);
+            
+            // Create search input
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'search-input';
+            searchInput.placeholder = 'Search artists or songs...';
+            searchInput.style.width = '100%';
+            searchInput.style.padding = '15px';
+            searchInput.style.fontSize = '24px';
+            searchInput.style.marginBottom = '20px';
+            searchInput.style.borderRadius = '4px';
+            searchInput.style.border = 'none';
+            keyboardContainer.appendChild(searchInput);
+            
+            // Create virtual keyboard
+            const keyboard = document.createElement('div');
+            keyboard.className = 'virtual-keyboard';
+            keyboard.style.display = 'flex';
+            keyboard.style.flexDirection = 'column';
+            keyboard.style.alignItems = 'center';
+            keyboard.style.width = '100%';
+            keyboard.style.marginBottom = '15px';
+            keyboardContainer.appendChild(keyboard);
+            
+
+            
+            // Create row containers for keyboard layout (5 rows now)
+            const rowContainers = [];
+            for (let i = 0; i < 5; i++) {
+                const row = document.createElement('div');
+                row.className = `keyboard-row-${i}`;
+                row.style.display = 'flex';
+                row.style.justifyContent = 'center'; // Center the row
+                row.style.gap = '10px';
+                row.style.marginBottom = '15px';
+                row.style.width = '100%';
+                row.style.maxWidth = '1024px'; // 80% of 1280px screen width
+                rowContainers.push(row);
+                keyboard.appendChild(row);
+            }
+            
+            // Define standard QWERTY keyboard layout with proper offset for each row
+            const keyboardLayout = [
+                '1234567890',        // Row 1: Numbers
+                'QWERTYUIOP',        // Row 2: QWERTY row
+                'ASDFGHJKL',         // Row 3: ASDF row
+                'ZXCVBNM',           // Row 4: ZXCV row
+                // Row 5 will be for controls (backspace, space, search)
+            ];
+            
+            // Define the offset for each row to achieve proper QWERTY staggering
+            const rowOffsets = [0, 0, 10, 35];
+            
+            // Generate keys for each row
+            keyboardLayout.forEach((row, rowIndex) => {
+                // Add offset spacing for proper keyboard layout
+                if (rowOffsets[rowIndex] > 0) {
+                    const spacer = document.createElement('div');
+                    spacer.style.width = `${rowOffsets[rowIndex]}px`;
+                    spacer.style.height = '1px';
+                    rowContainers[rowIndex].appendChild(spacer);
+                }
+                row.split('').forEach(char => {
+                    const key = document.createElement('button');
+                    key.textContent = char;
+                    key.className = 'keyboard-key';
+                    key.style.padding = '15px 0';
+                    key.style.width = '80px'; // Much wider keys for touchscreen
+                    key.style.height = '70px'; // Taller keys for better touch targets
+                    key.style.fontSize = '28px'; // Larger font for touchscreen readability
+                    key.style.backgroundColor = '#333';
+                    key.style.color = 'white';
+                    key.style.border = 'none';
+                    key.style.borderRadius = '4px';
+                    key.style.cursor = 'pointer';
+                    key.addEventListener('click', () => {
+                        searchInput.value += char;
+                        resetInactivityTimer(); // Reset timer on key press
+                    });
+                    rowContainers[rowIndex].appendChild(key);
+                });
+            });
+            
+            // Add keyboard controls to row 5 (bksp, space, search)
+            // Add backspace button
+            const backspace = document.createElement('button');
+            backspace.textContent = 'BkSpc';
+            backspace.className = 'keyboard-control';
+            backspace.style.padding = '15px';
+            backspace.style.width = '140px';
+            backspace.style.height = '70px';
+            backspace.style.fontSize = '24px';
+            backspace.style.backgroundColor = '#555';
+            backspace.style.color = 'white';
+            backspace.style.border = 'none';
+            backspace.style.borderRadius = '4px';
+            backspace.style.cursor = 'pointer';
+            backspace.addEventListener('click', () => {
+                searchInput.value = searchInput.value.slice(0, -1);
+                resetInactivityTimer(); // Reset timer on key press
+            });
+            rowContainers[4].appendChild(backspace);
+            
+            // Add space button
+            const space = document.createElement('button');
+            space.textContent = 'SPACE';
+            space.className = 'keyboard-control';
+            space.style.padding = '15px';
+            space.style.width = '400px';
+            space.style.height = '70px';
+            space.style.fontSize = '24px';
+            space.style.backgroundColor = '#555';
+            space.style.color = 'white';
+            space.style.border = 'none';
+            space.style.borderRadius = '4px';
+            space.style.margin = '0 10px';
+            space.style.cursor = 'pointer';
+            space.addEventListener('click', () => {
+                searchInput.value += ' ';
+                resetInactivityTimer(); // Reset timer on key press
+            });
+            rowContainers[4].appendChild(space);
+            
+            // Add search button
+            const searchBtn = document.createElement('button');
+            searchBtn.textContent = 'SEARCH';
+            searchBtn.className = 'keyboard-control';
+            searchBtn.style.padding = '15px';
+            searchBtn.style.width = '160px';
+            searchBtn.style.height = '70px';
+            searchBtn.style.fontSize = '24px';
+            searchBtn.style.backgroundColor = '#922';
+            searchBtn.style.color = 'white';
+            searchBtn.style.border = 'none';
+            searchBtn.style.borderRadius = '4px';
+            searchBtn.style.cursor = 'pointer';
+            rowContainers[4].appendChild(searchBtn);
+            
+            searchBtn.addEventListener('click', async () => {
+                if (searchInput.value.trim()) {
+                    // Hide keyboard container
+                    keyboardContainer.style.display = 'none';
+                    
+                    // Fade out the background image
+                    searchContainer.style.backgroundImage = 'none';
+                    searchContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                    
+                    // Create and display the bouncing shield loading animation
+                    const loadingAnimation = document.createElement('div');
+                    loadingAnimation.id = 'search-loading-animation';
+                    loadingAnimation.style.position = 'absolute';
+                    loadingAnimation.style.top = '50%';
+                    loadingAnimation.style.left = '50%';
+                    loadingAnimation.style.transform = 'translate(-50%, -50%)';
+                    loadingAnimation.style.width = '300px';
+                    loadingAnimation.style.height = '300px';
+                    loadingAnimation.style.backgroundImage = "url('assets/Obie_Shield_BOUNCING_.gif')";
+                    loadingAnimation.style.backgroundPosition = 'center';
+                    loadingAnimation.style.backgroundRepeat = 'no-repeat';
+                    loadingAnimation.style.backgroundSize = 'contain';
+                    loadingAnimation.style.zIndex = '100001';
+                    searchContainer.appendChild(loadingAnimation);
+                    
+                    // Clear results container
+                    resultsContainer.innerHTML = '';
+                    
+                    try {
+                        // Use the YouTube Data API to search for videos
+                        const searchQuery = encodeURIComponent(searchInput.value.trim());
+                        // Get API key directly from global variable set in main script
+                        // The main script should set window.YOUTUBE_API_KEY from the env variable
+                        const apiKey = window.YOUTUBE_API_KEY || 'AIzaSyC12QKbzGaKZw9VD3-ulxU_mrd0htZBiI4';
+                        console.log('Using YouTube API Key');
+                        const maxResults = 24; // We need 24 results (25 grid spots minus 1 for back button)
+                        
+                        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&q=${searchQuery}&type=video&key=${apiKey}`);
+                        
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        // Transform API response to our format
+                        const results = data.items.map(item => ({
+                            videoId: item.id.videoId,
+                            title: item.snippet.title,
+                            channelTitle: item.snippet.channelTitle,
+                            thumbnailUrl: item.snippet.thumbnails.medium.url
+                        }));
+                        
+                        // Remove loading animation
+                        const loadingElement = document.getElementById('search-loading-animation');
+                        if (loadingElement) {
+                            searchContainer.removeChild(loadingElement);
+                        }
+                        
+                        // Restore background
+                        searchContainer.style.backgroundImage = "url('assets/1280x1024_Obie_Shield.png')";
+                        searchContainer.style.backgroundSize = 'cover';
+                        searchContainer.style.backgroundPosition = 'center center';
+                        searchContainer.style.backgroundColor = 'transparent';
+                        
+                        displaySearchResults(results);
+                    } catch (error) {
+                        console.error('Error fetching search results:', error);
+                        
+                        // Fallback to mock results if API fails
+                        const mockResults = [
+                            {
+                                videoId: 'dQw4w9WgXcQ',
+                                title: 'Rick Astley - Never Gonna Give You Up',
+                                channelTitle: 'Rick Astley',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+                            },
+                            {
+                                videoId: 'L_jWHffIx5E',
+                                title: 'Smash Mouth - All Star',
+                                channelTitle: 'Smash Mouth',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/L_jWHffIx5E/hqdefault.jpg'
+                            },
+                            {
+                                videoId: 'y6120QOlsfU',
+                                title: 'Darude - Sandstorm',
+                                channelTitle: 'Darude',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/y6120QOlsfU/hqdefault.jpg'
+                            },
+                            {
+                                videoId: 'djV11Xbc914',
+                                title: 'a-ha - Take On Me',
+                                channelTitle: 'a-ha',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/djV11Xbc914/hqdefault.jpg'
+                            },
+                            {
+                                videoId: '9bZkp7q19f0',
+                                title: 'PSY - GANGNAM STYLE',
+                                channelTitle: 'PSY',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg'
+                            },
+                            {
+                                videoId: 'kXYiU_JCYtU',
+                                title: 'Numb - Linkin Park',
+                                channelTitle: 'Linkin Park',
+                                thumbnailUrl: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg'
+                            }
+                        ];
+                        
+                        // Generate more mock results to fill the grid
+                        for (let i = 6; i < 35; i++) {
+                            mockResults.push({
+                                videoId: `mock-video-${i}`,
+                                title: `Mock Video Title ${i}`,
+                                channelTitle: `Channel ${i}`,
+                                thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+                            });
+                        }
+                        
+                        // Remove loading animation
+                        const loadingElement = document.getElementById('search-loading-animation');
+                        if (loadingElement) {
+                            searchContainer.removeChild(loadingElement);
+                        }
+                        
+                        // Restore background
+                        searchContainer.style.backgroundImage = "url('assets/1280x1024_Obie_Shield.png')";
+                        searchContainer.style.backgroundSize = 'cover';
+                        searchContainer.style.backgroundPosition = 'center center';
+                        searchContainer.style.backgroundColor = 'transparent';
+                        
+                        displaySearchResults(mockResults);
+                    }
+                }
+            });
+            // No need to append to controls since we're already appending to rowContainers[4]
+            
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '×';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '10px';
+            closeBtn.style.right = '10px';
+            closeBtn.style.fontSize = '24px';
+            closeBtn.style.backgroundColor = 'transparent';
+            closeBtn.style.color = 'white';
+            closeBtn.style.border = 'none';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.padding = '5px 10px';
+            closeBtn.addEventListener('click', () => {
+                // Create a fade overlay for closing
+                const closeFadeOverlay = document.createElement('div');
+                closeFadeOverlay.style.position = 'fixed';
+                closeFadeOverlay.style.top = '50%';
+                closeFadeOverlay.style.left = '50%';
+                closeFadeOverlay.style.width = '1280px';
+                closeFadeOverlay.style.height = '1024px';
+                closeFadeOverlay.style.transform = 'translate(-50%, -50%)';
+                closeFadeOverlay.style.backgroundColor = 'black';
+                closeFadeOverlay.style.opacity = '0';
+                closeFadeOverlay.style.transition = 'opacity 1000ms ease';
+                closeFadeOverlay.style.zIndex = '99999';
+                document.body.appendChild(closeFadeOverlay);
+                
+                // Fade out the search container
+                searchContainer.style.opacity = '0';
+                
+                // Fade in the overlay
+                setTimeout(() => {
+                    closeFadeOverlay.style.opacity = '1';
+                }, 50);
+                
+                // Remove everything after the fade completes
+                setTimeout(() => {
+                    if (document.body.contains(searchContainer)) {
+                        document.body.removeChild(searchContainer);
+                    }
+                    if (document.body.contains(closeFadeOverlay)) {
+                        document.body.removeChild(closeFadeOverlay);
+                    }
+                    // Final cleanup - remove any other fade overlays that might exist
+                    const allOverlays = document.querySelectorAll('div[style*="position: fixed"][style*="backgroundColor: black"][style*="z-index: 99999"]');
+                    allOverlays.forEach(overlay => {
+                        if (document.body.contains(overlay)) {
+                            document.body.removeChild(overlay);
+                        }
+                    });
+                }, 1000);
+            });
+            keyboardContainer.appendChild(closeBtn);
+            
+            // Setup inactivity timer functionality first
+            let inactivityTimer;
+            
+            function resetInactivityTimer() {
+                // Clear existing timer
+                if (inactivityTimer) {
+                    clearTimeout(inactivityTimer);
+                }
+                
+                // Set new timer
+                inactivityTimer = setTimeout(() => {
+                    console.log('Inactivity timeout reached, closing search dialog...');
+                    // Create a fade overlay for closing
+                    const closeFadeOverlay = document.createElement('div');
+                    closeFadeOverlay.style.position = 'fixed';
+                    closeFadeOverlay.style.top = '50%';
+                    closeFadeOverlay.style.left = '50%';
+                    closeFadeOverlay.style.width = '1280px';
+                    closeFadeOverlay.style.height = '1024px';
+                    closeFadeOverlay.style.transform = 'translate(-50%, -50%)';
+                    closeFadeOverlay.style.backgroundColor = 'black';
+                    closeFadeOverlay.style.opacity = '0';
+                    closeFadeOverlay.style.transition = 'opacity 1000ms ease';
+                    closeFadeOverlay.style.zIndex = '99999';
+                    document.body.appendChild(closeFadeOverlay);
+                    
+                    // Fade out the search container
+                    searchContainer.style.opacity = '0';
+                    
+                    // Fade in the overlay
+                    setTimeout(() => {
+                        closeFadeOverlay.style.opacity = '1';
+                    }, 50);
+                    
+                    // Remove everything after the fade completes
+                    setTimeout(() => {
+                        if (document.body.contains(searchContainer)) {
+                            document.body.removeChild(searchContainer);
+                        }
+                        if (document.body.contains(closeFadeOverlay)) {
+                            document.body.removeChild(closeFadeOverlay);
+                        }
+                        // Final cleanup - remove any other fade overlays that might exist
+                        const allOverlays = document.querySelectorAll('div[style*="position: fixed"][style*="backgroundColor: black"][style*="z-index: 99999"]');
+                        allOverlays.forEach(overlay => {
+                            if (document.body.contains(overlay)) {
+                                document.body.removeChild(overlay);
+                            }
+                        });
+                    }, 1000);
+                }, 20000); // 20 seconds
+            }
+            
+            // Initialize inactivity timer
+            resetInactivityTimer();
+            
+            // Add event listeners to reset timer on user interaction
+            searchContainer.addEventListener('mousemove', resetInactivityTimer);
+            searchContainer.addEventListener('touchstart', resetInactivityTimer);
+            searchInput.addEventListener('input', resetInactivityTimer);
+            
+            // Create results container
+            const resultsContainer = document.createElement('div');
+            resultsContainer.className = 'search-results-container';
+            resultsContainer.style.width = '1050px'; // 4 columns at 250px + margins
+            resultsContainer.style.maxWidth = '1050px';
+            resultsContainer.style.marginTop = '20px';
+            resultsContainer.style.maxHeight = '950px'; // 5 rows at 180px + margins
+            resultsContainer.style.overflowY = 'auto';
+            resultsContainer.style.padding = '5px'; // 5px margin on grid frame
+            searchContainer.appendChild(resultsContainer);
+            
+            // Function to display search results
+            const displaySearchResults = (results) => {
+                if (!results || results.length === 0) {
+                    resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px;"><p style="color: white;">No results found. Try a different search term.</p></div>';
+                    return;
+                }
+                
+                resultsContainer.innerHTML = '';
+                
+                // Create grid for results
+                const grid = document.createElement('div');
+                grid.className = 'results-grid';
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(4, 250px)'; // 4 columns, 250px each
+                grid.style.gridTemplateRows = 'repeat(5, 180px)';    // 5 rows, 180px each
+                grid.style.gap = '10px'; // 10px margin between grid items
+                grid.style.padding = '5px'; // 5px margin on grid frame
+                grid.style.backgroundColor = 'black';
+                resultsContainer.appendChild(grid);
+                
+                // Add 'Back to Search' button in top-left position
+                const backButton = document.createElement('div');
+                backButton.className = 'back-button';
+                backButton.style.backgroundColor = '#444';
+                backButton.style.borderRadius = '4px';
+                backButton.style.display = 'flex';
+                backButton.style.flexDirection = 'column';
+                backButton.style.justifyContent = 'center';
+                backButton.style.alignItems = 'center';
+                backButton.style.cursor = 'pointer';
+                backButton.style.color = 'white';
+                backButton.style.fontWeight = 'bold';
+                backButton.style.fontSize = '16px';
+                backButton.style.padding = '10px';
+                backButton.innerHTML = '&lt; BACK TO SEARCH';
+                backButton.addEventListener('click', () => {
+                    // Show keyboard container again
+                    keyboardContainer.style.display = 'block';
+                    // Clear results container but keep the container itself
+                    while (resultsContainer.firstChild) {
+                        resultsContainer.removeChild(resultsContainer.firstChild);
+                    }
+                    // Reset search input focus
+                    searchInput.focus();
+                    
+                    // Reset inactivity timer when returning to keyboard
+                    resetInactivityTimer();
+                });
+                grid.appendChild(backButton);
+                
+                // Pagination variables
+                const resultsPerPage = 19; // 20 spots minus back button = 19 results per page
+                const totalPages = Math.ceil(results.length / resultsPerPage);
+                const maxPages = Math.min(4, totalPages); // Maximum 4 pages
+                let currentPage = 0;
+                
+                // Function to display a specific page of results
+                const displayPage = (pageNum) => {
+                    // Clear existing items except back button
+                    const items = grid.querySelectorAll('.result-item');
+                    items.forEach(item => grid.removeChild(item));
+                    
+                    // Get start and end index for current page
+                    const startIdx = pageNum * resultsPerPage;
+                    const endIdx = Math.min(startIdx + resultsPerPage, results.length);
+                    const pageResults = results.slice(startIdx, endIdx);
+                    
+                    // Add results for this page
+                    addResultsToGrid(pageResults);
+                    
+                    // Update pagination indicators
+                    updatePaginationIndicators(pageNum);
+                };
+                
+                // Create pagination controls
+                const paginationContainer = document.createElement('div');
+                paginationContainer.style.display = 'flex';
+                paginationContainer.style.justifyContent = 'center';
+                paginationContainer.style.alignItems = 'center';
+                paginationContainer.style.marginTop = '15px';
+                paginationContainer.style.gap = '10px';
+                resultsContainer.appendChild(paginationContainer);
+                
+                // Create page indicators
+                for (let i = 0; i < maxPages; i++) {
+                    const pageIndicator = document.createElement('div');
+                    pageIndicator.className = 'page-indicator';
+                    pageIndicator.dataset.page = i;
+                    pageIndicator.style.width = '12px';
+                    pageIndicator.style.height = '12px';
+                    pageIndicator.style.borderRadius = '50%';
+                    pageIndicator.style.backgroundColor = i === 0 ? '#ffffff' : '#444';
+                    pageIndicator.style.cursor = 'pointer';
+                    pageIndicator.style.transition = 'background-color 0.2s';
+                    
+                    pageIndicator.addEventListener('click', () => {
+                        if (currentPage !== i) {
+                            currentPage = i;
+                            displayPage(currentPage);
+                        }
+                    });
+                    
+                    paginationContainer.appendChild(pageIndicator);
+                }
+                
+                // Function to update pagination indicators
+                const updatePaginationIndicators = (activePage) => {
+                    const indicators = paginationContainer.querySelectorAll('.page-indicator');
+                    indicators.forEach((indicator, idx) => {
+                        indicator.style.backgroundColor = idx === activePage ? '#ffffff' : '#444';
+                    });
+                };
+                
+                // Function to add results to the grid
+                const addResultsToGrid = (pageResults) => {
+                    pageResults.forEach((result, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+                    item.style.backgroundColor = '#000';
+                    item.style.borderRadius = '4px';
+                    item.style.border = '1px solid #333';
+                    item.style.overflow = 'hidden';
+                    item.style.cursor = 'pointer';
+                    item.style.transition = 'transform 0.2s';
+                    item.style.position = 'relative';
+                    item.style.width = '100%';
+                    item.style.height = '100%';
+                    
+                    // Add hover effect
+                    item.addEventListener('mouseenter', () => {
+                        item.style.transform = 'scale(1.05)';
+                    });
+                    item.addEventListener('mouseleave', () => {
+                        item.style.transform = 'scale(1)';
+                    });
+                    
+                    // Add click handler to play video
+                    item.addEventListener('click', () => {
+                        console.log(`Selected video: ${result.videoId}`);
+                        
+                        // Create confirmation popup
+                        const popup = document.createElement('div');
+                        popup.className = 'confirmation-popup';
+                        popup.style.position = 'fixed';
+                        popup.style.top = '0';
+                        popup.style.left = '0';
+                        popup.style.width = '100%';
+                        popup.style.height = '100%';
+                        popup.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                        popup.style.display = 'flex';
+                        popup.style.flexDirection = 'column';
+                        popup.style.justifyContent = 'center';
+                        popup.style.alignItems = 'center';
+                        popup.style.zIndex = '200000';
+                        
+                        // Create enlarged preview (200% of original)
+                        const enlargedPreview = document.createElement('div');
+                        enlargedPreview.style.width = '500px'; // 2x the width
+                        enlargedPreview.style.height = '360px'; // 2x the height
+                        enlargedPreview.style.backgroundColor = '#000';
+                        enlargedPreview.style.borderRadius = '8px';
+                        enlargedPreview.style.border = '2px solid #333';
+                        enlargedPreview.style.overflow = 'hidden';
+                        enlargedPreview.style.position = 'relative';
+                        enlargedPreview.style.marginBottom = '30px';
+                        
+                        // Add enlarged thumbnail
+                        const enlargedThumb = document.createElement('img');
+                        enlargedThumb.src = result.thumbnailUrl;
+                        enlargedThumb.style.width = '100%';
+                        enlargedThumb.style.height = '300px'; // Leave room for title
+                        enlargedThumb.style.objectFit = 'cover';
+                        enlargedPreview.appendChild(enlargedThumb);
+                        
+                        // Add enlarged title
+                        const enlargedTitle = document.createElement('div');
+                        enlargedTitle.textContent = result.title;
+                        enlargedTitle.style.position = 'absolute';
+                        enlargedTitle.style.bottom = '0';
+                        enlargedTitle.style.left = '0';
+                        enlargedTitle.style.right = '0';
+                        enlargedTitle.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                        enlargedTitle.style.color = 'white';
+                        enlargedTitle.style.padding = '15px';
+                        enlargedTitle.style.fontSize = '18px';
+                        enlargedTitle.style.textAlign = 'center';
+                        enlargedTitle.style.whiteSpace = 'nowrap';
+                        enlargedTitle.style.overflow = 'hidden';
+                        enlargedTitle.style.textOverflow = 'ellipsis';
+                        enlargedPreview.appendChild(enlargedTitle);
+                        
+                        // Add confirmation text
+                        const confirmText = document.createElement('div');
+                        confirmText.textContent = 'ADD SONG TO PLAYLIST?';
+                        confirmText.style.color = 'white';
+                        confirmText.style.fontSize = '24px';
+                        confirmText.style.fontWeight = 'bold';
+                        confirmText.style.marginBottom = '30px';
+                        
+                        // Create button container
+                        const buttonContainer = document.createElement('div');
+                        buttonContainer.style.display = 'flex';
+                        buttonContainer.style.gap = '60px';
+                        
+                        // No button (red X)
+                        const noButton = document.createElement('button');
+                        noButton.innerHTML = '&#10006;'; // X symbol
+                        noButton.style.width = '80px';
+                        noButton.style.height = '80px';
+                        noButton.style.borderRadius = '50%';
+                        noButton.style.backgroundColor = '#d9534f';
+                        noButton.style.color = 'white';
+                        noButton.style.fontSize = '36px';
+                        noButton.style.border = 'none';
+                        noButton.style.cursor = 'pointer';
+                        noButton.style.display = 'flex';
+                        noButton.style.justifyContent = 'center';
+                        noButton.style.alignItems = 'center';
+                        noButton.addEventListener('click', () => {
+                            // Just close the popup
+                            document.body.removeChild(popup);
+                        });
+                        
+                        // Yes button (green check)
+                        const yesButton = document.createElement('button');
+                        yesButton.innerHTML = '&#10004;'; // Check symbol
+                        yesButton.style.width = '80px';
+                        yesButton.style.height = '80px';
+                        yesButton.style.borderRadius = '50%';
+                        yesButton.style.backgroundColor = '#5cb85c';
+                        yesButton.style.color = 'white';
+                        yesButton.style.fontSize = '36px';
+                        yesButton.style.border = 'none';
+                        yesButton.style.cursor = 'pointer';
+                        yesButton.style.display = 'flex';
+                        yesButton.style.justifyContent = 'center';
+                        yesButton.style.alignItems = 'center';
+                        yesButton.addEventListener('click', () => {
+                            // Create a custom event with video details
+                            const playEvent = new CustomEvent('jukeboxPlayVideo', {
+                                detail: {
+                                    videoId: result.videoId,
+                                    title: result.title,
+                                    channelTitle: result.channelTitle
+                                }
+                            });
+                            window.dispatchEvent(playEvent);
+                            
+                            // Close popup and search dialog
+                            document.body.removeChild(popup);
+                            closeBtn.click();
+                        });
+                        
+                        // Add buttons to container
+                        buttonContainer.appendChild(noButton);
+                        buttonContainer.appendChild(yesButton);
+                        
+                        // Assemble popup
+                        popup.appendChild(enlargedPreview);
+                        popup.appendChild(confirmText);
+                        popup.appendChild(buttonContainer);
+                        
+                        // Add popup to body
+                        document.body.appendChild(popup);
+                    });
+                    
+                    // Thumbnail
+                    const thumbnailContainer = document.createElement('div');
+                    thumbnailContainer.className = 'thumbnail-container';
+                    thumbnailContainer.style.position = 'relative';
+                    
+                    const thumbnail = document.createElement('img');
+                    thumbnail.src = result.thumbnailUrl;
+                    thumbnail.alt = result.title;
+                    thumbnail.style.width = '100%';
+                    thumbnail.style.height = 'auto';
+                    thumbnailContainer.appendChild(thumbnail);
+                    
+                    // Add title with scrolling for long text
+                    const title = document.createElement('div');
+                    title.className = 'result-title';
+                    title.textContent = result.title;
+                    title.style.position = 'absolute';
+                    title.style.bottom = '0';
+                    title.style.left = '0';
+                    title.style.right = '0';
+                    title.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                    title.style.color = 'white';
+                    title.style.padding = '8px';
+                    title.style.fontSize = '12px';
+                    title.style.whiteSpace = 'nowrap';
+                    title.style.overflow = 'hidden';
+                    
+                    // Add scrolling animation for long titles
+                    if (result.title.length > 30) {
+                        title.style.animation = 'scrollText 8s linear infinite';
+                        title.style.paddingLeft = '100%'; // Start from right side
+                        
+                        // Add scrolling animation if it doesn't exist yet
+                        if (!document.getElementById('scrolling-animation-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'scrolling-animation-style';
+                            style.textContent = `
+                                @keyframes scrollText {
+                                    0% { transform: translateX(0); }
+                                    100% { transform: translateX(-100%); }
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }
+                    } else {
+                        title.style.textOverflow = 'ellipsis';
+                    }
+                    
+                    thumbnailContainer.appendChild(title);
+                    
+                    // Play icon overlay
+                    const playIcon = document.createElement('div');
+                    playIcon.className = 'play-icon';
+                    playIcon.textContent = '▶';
+                    playIcon.style.position = 'absolute';
+                    playIcon.style.top = '50%';
+                    playIcon.style.left = '50%';
+                    playIcon.style.transform = 'translate(-50%, -50%)';
+                    playIcon.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                    playIcon.style.color = 'white';
+                    playIcon.style.borderRadius = '50%';
+                    playIcon.style.width = '40px';
+                    playIcon.style.height = '40px';
+                    playIcon.style.display = 'flex';
+                    playIcon.style.justifyContent = 'center';
+                    playIcon.style.alignItems = 'center';
+                    playIcon.style.fontSize = '18px';
+                    thumbnailContainer.appendChild(playIcon);
+                    
+                    item.appendChild(thumbnailContainer);
+                    
+                    // Video info
+                    const videoInfo = document.createElement('div');
+                    videoInfo.className = 'video-info';
+                    videoInfo.style.padding = '10px';
+                    
+                    const title = document.createElement('h3');
+                    title.className = 'video-title';
+                    title.textContent = result.title;
+                    title.style.margin = '0 0 5px 0';
+                    title.style.fontSize = '16px';
+                    title.style.color = 'white';
+                    title.style.overflow = 'hidden';
+                    title.style.textOverflow = 'ellipsis';
+                    title.style.whiteSpace = 'nowrap';
+                    videoInfo.appendChild(title);
+                    
+                    const channelTitle = document.createElement('p');
+                    channelTitle.className = 'channel-title';
+                    channelTitle.textContent = result.channelTitle;
+                    channelTitle.style.margin = '0';
+                    channelTitle.style.fontSize = '14px';
+                    channelTitle.style.color = '#aaa';
+                    channelTitle.style.overflow = 'hidden';
+                    channelTitle.style.textOverflow = 'ellipsis';
+                    channelTitle.style.whiteSpace = 'nowrap';
+                    videoInfo.appendChild(channelTitle);
+                    
+                    item.appendChild(videoInfo);
+                    
+                    grid.appendChild(item);
+                    });
+                };
+                
+                // Display the first page
+                displayPage(0);
+            };
+            
+            // Focus on the input
+            searchInput.focus();
+            
+            // Reset inactivity timer function already defined at the top
+            // Initialize the inactivity timer
+            resetInactivityTimer();
+            
+            // Add event listeners to reset timer on user interaction
+            searchContainer.addEventListener('mousemove', resetInactivityTimer);
+            searchContainer.addEventListener('touchstart', resetInactivityTimer);
+            searchInput.addEventListener('input', resetInactivityTimer);
+                
+            }, 1000); // End of the first setTimeout (after fade out)
+        };
+        
+        // Listen for the custom event from the button click
+        window.addEventListener('jukeboxSearchRequested', () => {
+            console.log('Search requested event received');
+            window.openSearchDialog();
+        });
+        
+        // Log that our search functionality is ready
+        console.log('Search functionality initialized');
+    </script>
+    
+    <!-- Using native HTML button instead of React components -->
+</body>
+</html>
