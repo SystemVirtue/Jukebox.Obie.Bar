@@ -1,0 +1,73 @@
+{
+    "scripts": {
+    "clean": "rm -rf public/dist",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "build:watch": "tsc -w",
+    "prestart": "npm run build",
+    "start": "http-server public -p 3005 --cors -c-1",
+    "dev": "concurrently \"npm run build:watch\" \"http-server public -p 3005 --cors -c-1\"",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },c_youtube_jukebox_x1",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -rf public/dist",
+    "prebuild": "npm run clean",
+    "build": "tsc && cp -r public/dist/* public/",
+    "build:watch": "tsc -w",
+    "prestart": "npm run build",
+    "start": "http-server public -p 3000",
+    "dev": "concurrently \"npm run build:watch\" \"http-server public -p 3000\"",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "jsdom",
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ],
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "tsconfig.json"
+      }
+    },
+    "setupFiles": [
+      "<rootDir>/tests/setup.ts"
+    ],
+    "collectCoverage": true,
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/",
+      "/dist/"
+    ]
+  },
+  "keywords": [
+    "youtube",
+    "jukebox",
+    "kiosk"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "YouTube Jukebox OBIE/X1 - Commercial-grade touchscreen music video jukebox",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.21",
+    "@types/youtube": "^0.1.1",
+    "concurrently": "^9.1.2",
+    "http-server": "^14.1.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "dev"],
+            "label": "Build and Start Jukebox",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "isBackground": true,
+            "problemMatcher": ["$tsc-watch"]
+        },
+        {
+            "type": "shell",
+            "command": "npm",
+            "args": ["test"],
+            "label": "Run Tests",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": ["$tsc"]
+        }
+    ]
+}
