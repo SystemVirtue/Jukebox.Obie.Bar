@@ -24,12 +24,20 @@ class AdminPanel {
         
         // Initialize coin processor
         this.coinProcessor = new CoinProcessor();
-        this.updateCreditDisplay(this.coinProcessor.getCredits());
         
-        // Setup callback for credit changes
-        this.coinProcessor.setOnCreditCallback((credits: number) => {
-            this.updateCreditDisplay(credits);
-        });
+        // Only access methods if coinProcessor was successfully initialized
+        if (this.coinProcessor) {
+            // Get initial credits value safely
+            const initialCredits = this.coinProcessor.getCredits?.() ?? 0;
+            this.updateCreditDisplay(initialCredits);
+            
+            // Setup callback for credit changes (safely access method)
+            if (typeof this.coinProcessor.setOnCreditCallback === 'function') {
+                this.coinProcessor.setOnCreditCallback((credits: number) => {
+                    this.updateCreditDisplay(credits);
+                });
+            }
+        }
         
         this.log('Admin dashboard initialized', 'info');
     }
@@ -583,7 +591,8 @@ class AdminPanel {
                 this.coinProcessor = new CoinProcessor();
             }
             
-            const connected = await this.coinProcessor.connect();
+            // Safely access connect method with null checking
+            const connected = this.coinProcessor ? await this.coinProcessor.connect() : false;
             if (connected) {
                 this.updateCoinAcceptorStatus(true);
                 this.log('Connected to coin acceptor', 'info');
@@ -758,7 +767,8 @@ class AdminPanel {
         const statusEl = document.getElementById('serial-connection-status');
         if (statusEl && this.coinProcessor) {
             statusEl.textContent = this.coinProcessor.isConnected ? 'Connected' : 'Disconnected';
-            const portInfo = this.coinProcessor.getPortInfo();
+            // Safely access getPortInfo with optional chaining
+            const portInfo = this.coinProcessor?.getPortInfo?.() ?? 'Unknown';
             this.addSerialLogEntry(`Monitor started. Port: ${portInfo || 'Not connected'}`);
         } else if (statusEl) {
             statusEl.textContent = 'Disconnected';
@@ -766,7 +776,7 @@ class AdminPanel {
         }
         
         // Set up serial monitoring
-        if (this.coinProcessor) {
+        if (this.coinProcessor && typeof this.coinProcessor.setSerialCallback === 'function') {
             this.coinProcessor.setSerialCallback((message: string) => {
                 this.addSerialLogEntry(message);
             });
@@ -794,8 +804,10 @@ class AdminPanel {
             localStorage.setItem('jukebox_credits', '0');
             
             if (this.coinProcessor) {
-                // Force a reload of the credits
-                this.coinProcessor['loadCredits']();
+                // Force a reload of the credits - safely access loadCredits method
+                if (typeof this.coinProcessor['loadCredits'] === 'function') {
+                    this.coinProcessor['loadCredits']();
+                }
                 this.updateCreditDisplay(0);
             }
             
@@ -823,8 +835,10 @@ class AdminPanel {
             // Save to local storage
             localStorage.setItem('jukebox_credits', newCredits.toString());
             
-            // Update the coin processor
-            this.coinProcessor['loadCredits']();
+            // Update the coin processor - safely access loadCredits method
+            if (this.coinProcessor && typeof this.coinProcessor['loadCredits'] === 'function') {
+                this.coinProcessor['loadCredits']();
+            }
             this.updateCreditDisplay(newCredits);
             
             // Notify other components via event bus
