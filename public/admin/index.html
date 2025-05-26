@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Jukebox X1 - Admin Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles/grid.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div id="admin-root">
+        <header class="admin-header">
+            <h1>YouTube Jukebox X1 - Admin Dashboard</h1>
+            <div class="status-indicator">
+                <span id="connection-status">Checking connection...</span>
+            </div>
+        </header>
+        
+        <div class="admin-container">
+            <nav class="admin-sidebar">
+                <ul>
+                    <li><a href="#dashboard" class="active">Dashboard</a></li>
+                    <li><a href="#jukebox">Jukebox Control</a></li>
+                    <li><a href="#payments">Payment System</a></li>
+                    <li><a href="#playlists">Playlists</a></li>
+                    <li><a href="#logs">System Logs</a></li>
+                    <li><a href="#settings">Settings</a></li>
+                </ul>
+            </nav>
+            
+            <main class="admin-content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="admin-section active">
+                    <h2>System Dashboard</h2>
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <h3>Credits</h3>
+                            <div class="stat-value" id="credit-balance">--</div>
+                            <div class="stat-label">Current Balance</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Videos</h3>
+                            <div class="stat-value" id="videos-played">--</div>
+                            <div class="stat-label">Played Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Revenue</h3>
+                            <div class="stat-value" id="daily-revenue">$--</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Status</h3>
+                            <div class="stat-value" id="system-status">--</div>
+                            <div class="stat-label">System</div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-actions">
+                        <button id="emergency-stop" class="danger-button">Emergency Stop</button>
+                        <button id="restart-system">Restart System</button>
+                        <button id="test-coin-acceptor">Add Credits</button>
+                        <button id="cancel-credit" class="warning-button">Cancel Credit</button>
+                    </div>
+                    
+                    <h3>Currently Playing</h3>
+                    <div id="now-playing">
+                        <div class="no-content">No video is currently playing</div>
+                    </div>
+                    
+                    <h3>Queue</h3>
+                    <div id="queue-list">
+                        <div class="no-content">Queue is empty</div>
+                    </div>
+                </section>
+                
+                <!-- Jukebox Control Section -->
+                <section id="jukebox" class="admin-section">
+                    <h2>Jukebox Control</h2>
+                    <div class="control-panel">
+                        <div class="control-group">
+                            <h3>Playback</h3>
+                            <button id="play-button">Play</button>
+                            <button id="pause-button">Pause</button>
+                            <button id="skip-button">Skip</button>
+                            <button id="stop-button">Stop</button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>Volume</h3>
+                            <div class="volume-control">
+                                <button id="volume-down">-</button>
+                                <input type="range" id="volume-slider" min="0" max="100" value="75">
+                                <button id="volume-up">+</button>
+                            </div>
+                            <button id="mute-button">Mute</button>
+                        </div>
+                    </div>
+                    
+                    <h3>Queue Management</h3>
+                    <div class="queue-management">
+                        <div class="queue-actions">
+                            <button id="clear-queue">Clear Queue</button>
+                            <button id="add-video">Add Video</button>
+                        </div>
+                        <div id="admin-queue-list">
+                            <div class="no-content">Queue is empty</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Payment System Section -->
+                <section id="payments" class="admin-section">
+                    <h2>Payment System</h2>
+                    <div class="device-status">
+                        <h3>Coin Acceptor Status</h3>
+                        <div class="status-card">
+                            <div class="status-label">Connection:</div>
+                            <div class="status-value" id="coin-connection-status">Not connected</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-label">Port:</div>
+                            <div class="status-value" id="coin-port">--</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-label">Credits:</div>
+                            <div class="status-value" id="coin-credits">0</div>
+                        </div>
+                        <button id="connect-coin-acceptor">Connect Coin Acceptor</button>
+                    </div>
+                    
+                    <div class="payment-settings">
+                        <h3>Credit Settings</h3>
+                        <form id="credit-settings-form">
+                            <div class="form-group">
+                                <label for="dollar-one-value">$1 Value (Credits):</label>
+                                <input type="number" id="dollar-one-value" value="1" min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="dollar-two-value">$2 Value (Credits):</label>
+                                <input type="number" id="dollar-two-value" value="3" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="max-credits">Maximum Credits:</label>
+                                <input type="number" id="max-credits" value="255" min="1" max="999">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="credit-management">
+                        <h3>Credit Management</h3>
+                        <div class="admin-actions">
+                            <div class="form-group">
+                                <label for="add-credits">Add Credits:</label>
+                                <div class="inline-input">
+                                    <input type="number" id="add-credits" value="1" min="1" max="100">
+                                    <button id="add-credits-btn">Add</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button id="reset-credits" class="danger-button">Reset Credits to 0</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Playlists Section -->
+                <section id="playlists" class="admin-section">
+                    <h2>Playlist Management</h2>
+                    <div class="playlist-container">
+                        <div class="playlist-list">
+                            <h3>Saved Playlists</h3>
+                            <ul id="saved-playlists">
+                                <li class="loading">Loading playlists...</li>
+                            </ul>
+                            <button id="add-playlist">Add New Playlist</button>
+                        </div>
+                        
+                        <div class="playlist-details">
+                            <h3>Playlist Details</h3>
+                            <div id="playlist-info">
+                                <div class="no-content">Select a playlist to view details</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- System Logs Section -->
+                <section id="logs" class="admin-section">
+                    <h2>System Logs</h2>
+                    <div class="log-controls">
+                        <div class="log-filter">
+                            <label for="log-level">Filter by level:</label>
+                            <select id="log-level">
+                                <option value="all">All Levels</option>
+                                <option value="error">Errors Only</option>
+                                <option value="warning">Warnings & Errors</option>
+                                <option value="info">Info & Above</option>
+                            </select>
+                        </div>
+                        <div class="log-actions">
+                            <button id="refresh-logs">Refresh</button>
+                            <button id="export-logs">Export</button>
+                            <button id="clear-logs" class="danger-button">Clear Logs</button>
+                        </div>
+                    </div>
+                    
+                    <div class="log-viewer">
+                        <div id="log-entries">
+                            <div class="log-entry info">
+                                <span class="log-time">10:45:23</span>
+                                <span class="log-level">INFO</span>
+                                <span class="log-message">System initialized</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Settings Section -->
+                <section id="settings" class="admin-section">
+                    <h2>System Settings</h2>
+                    <form id="settings-form">
+                        <div class="settings-group">
+                            <h3>YouTube API</h3>
+                            <div class="form-group">
+                                <label for="api-key">API Key:</label>
+                                <input type="password" id="api-key" placeholder="API Key">
+                                <button type="button" id="show-api-key" class="inline-button">Show</button>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" id="test-api-key">Test API Key</button>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <h3>Display Settings</h3>
+                            <div class="form-group">
+                                <label for="idle-timeout">Idle Timeout (seconds):</label>
+                                <input type="number" id="idle-timeout" value="300" min="30" max="3600">
+                            </div>
+                            <div class="form-group">
+                                <label for="transition-effect">Transition Effect:</label>
+                                <select id="transition-effect">
+                                    <option value="fade">Fade</option>
+                                    <option value="slide">Slide</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <h3>Security</h3>
+                            <div class="form-group">
+                                <label for="admin-password">Admin Password:</label>
+                                <input type="password" id="admin-password" placeholder="Change password">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password">Confirm Password:</label>
+                                <input type="password" id="confirm-password" placeholder="Confirm password">
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit">Save All Settings</button>
+                            <button type="button" id="reset-defaults" class="secondary-button">Reset to Defaults</button>
+                        </div>
+                    </form>
+                </section>
+            </main>
+        </div>
+    </div>
+    
+    <script type="module" src="../src/admin/adminPanel.ts"></script>
+</body>
+</html>

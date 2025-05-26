@@ -16,7 +16,8 @@ export const YouTubeConfig = {
             part: 'snippet',
             maxResults: 50
         },
-        key: process.env.YOUTUBE_API_KEY || 'YOUR-API-KEY'
+        // The API key will be injected by the application at runtime
+        key: window.YOUTUBE_API_KEY || 'YOUR-API-KEY'
     },
     player: {
         height: 720,

@@ -1,0 +1,64 @@
+.main-ui-background {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #111;
+}
+
+.neon-bg,
+.neon-fg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: auto;
+  z-index: 1;
+  pointer-events: none;
+  will-change: opacity;
+  /* Improve rendering performance */
+  image-rendering: crisp-edges;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.neon-fg {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 1.5s linear;
+}
+
+.shield-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shield-spinner img {
+  width: 180px;
+  height: auto;
+}
+
+/* Shield Crest Animation Video */
+/* Use CSS variable for easier adjustment of neon width */
+:root {
+  --neon-image-width: 1024px; /* Updated to match actual neon image width */
+}
+
+.shield-crest-video {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  /* Position left edge at right edge of neon images */
+  left: var(--neon-image-width);
+  z-index: 3;
+  object-fit: contain;
+  /* Ensure the video plays smoothly */
+  pointer-events: none;
+  will-change: transform;
+}

@@ -18,7 +18,7 @@ export const SecurityConfig = {
         retries: 3
     },
     admin: {
-        password: 'admin123', // Should be environment variable in production
+        password: '', // No password required
         physicalButtonHoldTime: 3000 // 3 seconds
     }
 };

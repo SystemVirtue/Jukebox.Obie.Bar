@@ -9,7 +9,11 @@
     "outDir": "./public/dist",
     "rootDir": "./src",
     "moduleResolution": "node",
-    "lib": ["DOM", "ES2020"],
+    "baseUrl": "./src",
+    "paths": {
+      "*": ["*"]
+    },
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "typeRoots": [
       "./node_modules/@types",
       "./src/types"
@@ -19,8 +23,12 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "moduleDetection": "force",
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "coverage", "public"]
+  "exclude": ["node_modules", "**/dist", "coverage", "public"]
 }

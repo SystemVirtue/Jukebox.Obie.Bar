@@ -1,3 +1,6 @@
+// Import environment variables with Vite's import.meta.env
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || 'YOUR-API-KEY';
+
 export const YouTubeConfig = {
     playlists: [
         'PLN9QqCogPsXLAtgvLQ0tvpLv820R7PQsM',
@@ -14,9 +17,9 @@ export const YouTubeConfig = {
         },
         params: {
             part: 'snippet',
-            maxResults: 50
-        },
-        key: process.env.YOUTUBE_API_KEY || 'YOUR-API-KEY'
+            maxResults: 50,
+            key: YOUTUBE_API_KEY
+        }
     },
     player: {
         height: 720,

@@ -1,4 +1,4 @@
-import { EventDetail, EventName } from '../types/events.js';
+import { EventDetail, EventName } from '../types/events';
 
 type EventCallback<T extends EventName> = (detail: EventDetail[T]) => void;
 

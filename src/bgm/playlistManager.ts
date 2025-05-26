@@ -96,14 +96,65 @@ export class PlaylistManager {
         });
     }
 
-    private async fetchFromYouTube(playlistId: string): Promise<PlaylistItem[]> {
-        // Implement YouTube API call here
-        // This would use the YouTube Data API v3 to fetch playlist items
-        // Return array of PlaylistItem
-        throw new Error('Not implemented');
-    }
-
     public getDefaultPlaylists(): string[] {
         return [...PlaylistManager.DEFAULT_PLAYLISTS];
+    }
+
+    private async fetchFromYouTube(playlistId: string): Promise<PlaylistItem[]> {
+        // Debug: Log available environment variables
+        console.log('Environment variables:', {
+            'window.YOUTUBE_API_KEY': (window as any).YOUTUBE_API_KEY ? '***' + String((window as any).YOUTUBE_API_KEY).slice(-4) : 'Not found',
+            'import.meta.env.VITE_YOUTUBE_API_KEY': import.meta.env.VITE_YOUTUBE_API_KEY ? '***' + String(import.meta.env.VITE_YOUTUBE_API_KEY).slice(-4) : 'Not found'
+        });
+
+        // Get API key from window or import.meta.env
+        const apiKey = (window as any).YOUTUBE_API_KEY || import.meta.env.VITE_YOUTUBE_API_KEY;
+        
+        if (!apiKey) {
+            const errorMsg = 'YouTube API key is not configured. Please check the following:\n' +
+                          '1. Ensure your .env file exists in the project root\n' +
+                          '2. It contains VITE_YOUTUBE_API_KEY=your_api_key\n' +
+                          '3. The server was restarted after updating the .env file\n' +
+                          'Current environment variables: ' + JSON.stringify({
+                            'window.YOUTUBE_API_KEY': !!window.YOUTUBE_API_KEY,
+                            'import.meta.env.VITE_YOUTUBE_API_KEY': !!import.meta.env.VITE_YOUTUBE_API_KEY
+                          }, null, 2);
+            console.error(errorMsg);
+            throw new Error('YouTube API key is not configured');
+        }
+
+        try {
+            // First, get the playlist items
+            const playlistItemsUrl = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+            playlistItemsUrl.searchParams.append('part', 'snippet');
+            playlistItemsUrl.searchParams.append('maxResults', '50');
+            playlistItemsUrl.searchParams.append('playlistId', playlistId);
+            playlistItemsUrl.searchParams.append('key', apiKey);
+
+            const response = await fetch(playlistItemsUrl.toString());
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`YouTube API error: ${errorData.error?.message || 'Unknown error'}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.items || !Array.isArray(data.items)) {
+                throw new Error('Invalid response from YouTube API');
+            }
+
+            // Map the response to our PlaylistItem format
+            return data.items
+                .filter((item: any) => item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
+                .map((item: any) => ({
+                    videoId: item.snippet.resourceId.videoId,
+                    title: item.snippet.title,
+                    thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || ''
+                }));
+        } catch (error) {
+            console.error(`[${new Date().toLocaleTimeString('en-CA', { hour12: false })}] Failed to fetch from YouTube: ${error}`);
+            throw error;
+        }
     }
 }

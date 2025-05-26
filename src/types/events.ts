@@ -18,6 +18,20 @@ export interface EventDetail {
     'system-reset': {
         success: boolean;
     };
+    'credits-added': {
+        amount: number;
+        total: number;
+    };
+    'credits-changed': {
+        total: number;
+        change: number;
+        reason: string;
+    };
+    'hardware-error': {
+        source: string;
+        code: string;
+        message: string;
+    };
 }
 
 export type EventName = keyof EventDetail;

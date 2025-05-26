@@ -1,0 +1,36 @@
+.search-button {
+  width: 650px;
+  height: 80px;
+  margin: 40px;
+  font-size: calc((650px - 36px) / 25); /* Larger text size to fit button width with 18px margin on each side */
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.8); /* White with 80% opacity */
+  background-color: rgba(255, 0, 0, 0.5); /* YouTube red with 50% opacity */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 12px 4px rgba(139, 0, 0, 0.6); /* Dark red blurry border */
+  transition: background-color 0.2s, transform 0.1s;
+  text-transform: uppercase;
+  position: fixed;
+  left: 50vw;
+  top: 90vh;
+  transform: translate(-50%, -50%); /* Center the button at the specified position */
+  z-index: 9999; /* Ensure the button is on top of all other elements */
+}
+
+.search-button:hover {
+  background-color: #cc0000; /* Darker red on hover */
+}
+
+.search-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* For touch devices */
+@media (hover: none) {
+  .search-button {
+    font-size: 20px; /* Slightly smaller text on mobile */
+  }
+}

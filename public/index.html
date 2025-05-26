@@ -3,17 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Jukebox OBIE/X1</title>
+    <title>YouTube Jukebox OBIE/X1 - Hub</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/styles/grid.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        h1 {
+            color: #e50914;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .navigation {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .nav-card {
+            background-color: #222;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+        
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .nav-card h2 {
+            margin-top: 0;
+            color: #e50914;
+        }
+        
+        .nav-card p {
+            margin-bottom: 20px;
+        }
+        
+        .nav-card a {
+            display: inline-block;
+            background-color: #e50914;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-card a:hover {
+            background-color: #f40612;
+        }
+    </style>
 </head>
 <body>
-    <div id="jukebox-container">
-        <div id="player-container"></div>
-        <div id="thumbnails-container"></div>
-        <div id="message-display"></div>
-        <button id="admin-button" class="hidden">Admin Access</button>
+    <h1>YouTube Jukebox OBIE/X1</h1>
+    
+    <div class="navigation">
+        <div class="nav-card">
+            <h2>Search Kiosk</h2>
+            <p>Use the touch kiosk interface to search for artists and songs.</p>
+            <a href="/jukebox">Open Search Kiosk</a>
+        </div>
+        
+        <div class="nav-card">
+            <h2>Player</h2>
+            <p>Open the dedicated fullscreen player window for video playback.</p>
+            <a href="/player.html">Open Player</a>
+        </div>
+        
+        <div class="nav-card">
+            <h2>Admin Dashboard</h2>
+            <p>Access system controls, playlists, and settings.</p>
+            <a href="/admin/index.html">Open Admin Dashboard</a>
+        </div>
     </div>
-    <script type="module" src="/dist/index.js"></script>
+    <script type="module">
+        // This script runs before any modules are loaded
+        console.log('Initializing global variables...');
+        
+        // Access the API key from import.meta.env
+        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+        
+        // Make it available globally
+        window.YOUTUBE_API_KEY = apiKey;
+        
+        console.log('Global YOUTUBE_API_KEY set:', 
+            apiKey ? '***' + String(apiKey).slice(-4) : 'Not found');
+    </script>
+    <script type="module" src="../src/index.ts"></script>
 </body>
 </html>

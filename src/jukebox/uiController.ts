@@ -1,8 +1,8 @@
-import { YouTubePlayer } from '../player/ytPlayer.js';
-import { PlaylistManager } from '../bgm/playlistManager.js';
-import { PriorityQueue } from './priorityQueue.js';
-import { CoinProcessor } from '../hardware/coinProcessor.js';
-import { EventBus } from '../utils/eventBus.js';
+import { YouTubePlayer } from '../player/ytPlayer';
+import { PlaylistManager } from '../bgm/playlistManager';
+import { PriorityQueue } from './priorityQueue';
+import { CoinProcessor } from '../hardware/CoinProcessor';
+import { EventBus } from '../utils/eventBus';
 
 export class UIController {
     private player: YouTubePlayer;

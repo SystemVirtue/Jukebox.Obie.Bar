@@ -1,6 +1,6 @@
-import { SecurityConfig } from '../config/security.config.js';
-import { YouTubeConfig } from '../config/youtube.config.js';
-import { EventBus } from '../utils/eventBus.js';
+import { SecurityConfig } from '../config/security.config';
+import { YouTubeConfig } from '../config/youtube.config';
+import { EventBus } from '../utils/eventBus';
 
 export class AdminDashboard {
     private static readonly LOG_RETENTION_DAYS = 7;
