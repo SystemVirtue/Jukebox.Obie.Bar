@@ -1,4 +1,4 @@
-import { CoinProcessor } from '../hardware';
+import { CoinProcessor, ICoinProcessor } from '../hardware';
 import { EventBus } from '../utils/eventBus';
 
 /**
@@ -7,7 +7,7 @@ import { EventBus } from '../utils/eventBus';
  */
 export class CreditsService {
     private static instance: CreditsService | null = null;
-    private coinProcessor: CoinProcessor;
+    private coinProcessor: ICoinProcessor;
     private eventBus = EventBus.getInstance();
     private creditChangeCallbacks: ((credits: number) => void)[] = [];
     private creditSettings: {

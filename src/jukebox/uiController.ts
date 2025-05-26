@@ -1,14 +1,14 @@
 import { YouTubePlayer } from '../player/ytPlayer';
 import { PlaylistManager } from '../bgm/playlistManager';
 import { PriorityQueue } from './priorityQueue';
-import { CoinProcessor } from '../hardware';
+import { ICoinProcessor, CoinProcessor } from '../hardware';
 import { EventBus } from '../utils/eventBus';
 
 export class UIController {
     private player: YouTubePlayer;
     private playlistManager: PlaylistManager;
     private queue: PriorityQueue;
-    private coinProcessor: CoinProcessor;
+    private coinProcessor: ICoinProcessor;
     private inactivityTimer?: number;
     private static readonly INACTIVITY_TIMEOUT = 60000; // 60 seconds
 
