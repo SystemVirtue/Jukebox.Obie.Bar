@@ -26,21 +26,32 @@ export class PlayerService {
   private readonly playerUrl: string;
 
   constructor() {
+    // Ensure we use the absolute URL with origin for cross-environment compatibility
     this.playerUrl = `${window.location.origin}/player.html`;
     this.setupStorageListener();
   }
 
   public openPlayer(): void {
-    if (this.isPlayerOpen && !this.playerWindow?.closed) {
+    // Close any existing player window to avoid duplicates
+    if (this.playerWindow && !this.playerWindow.closed) {
       this.focusPlayer();
       return;
+    }
+
+    // Force close any existing player references
+    try {
+      if (this.playerWindow) {
+        this.playerWindow.close();
+      }
+    } catch (e) {
+      console.warn('Could not close existing player window:', e);
     }
 
     // Use screen dimensions for optimal fullscreen experience
     const features = [
       'popup=yes',
-      `width=${window.screen.availWidth}`, // Use full screen width
-      `height=${window.screen.availHeight}`, // Use full screen height
+      `width=${window.screen.availWidth || 1024}`, // Use full screen width with fallback
+      `height=${window.screen.availHeight || 768}`, // Use full screen height with fallback
       'left=0',
       'top=0',
       'scrollbars=no',
@@ -48,10 +59,12 @@ export class PlayerService {
       'location=no',
       'status=no',
       'menubar=no',
-      'fullscreen=yes' // Request fullscreen - might require user gesture to activate
+      'fullscreen=yes', // Request fullscreen - might require user gesture to activate
+      '_blank' // Force new window
     ].join(',');
 
-    this.playerWindow = window.open(this.playerUrl, 'YouTubeJukeboxPlayer', features);
+    // Ensure we use a unique target name and forced _blank for better cross-browser compatibility
+    this.playerWindow = window.open(this.playerUrl, 'YouTubeJukeboxPlayer_' + Date.now(), features);
     
     if (!this.playerWindow) {
       console.error('Failed to open player window. Please allow popups for this site.');
