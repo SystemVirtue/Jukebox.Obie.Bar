@@ -11,7 +11,7 @@ interface PlayerCommand {
 
 interface PlayerStatus {
   type: 'stateChange' | 'error' | 'playerClosed';
-  state?: YT.PlayerState | string;
+  state?: number | string; // Using number for YT.PlayerState enum values
   error?: string;
   timestamp: number;
 }

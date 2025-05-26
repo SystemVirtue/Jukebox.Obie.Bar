@@ -1,17 +1,21 @@
 
+// Reference our custom YouTube Player type definitions
+/// <reference path="../types/youtube-player.d.ts" />
+
 declare global {
     interface Window {
+        YT: typeof YT;
         onYouTubeIframeAPIReady: () => void;
     }
 }
 
 interface PlayerCallbacks {
-    onReady?: () => void;
-    onError?: (event: YT.OnErrorEvent) => void;
-    onStateChange?: (event: YT.OnStateChangeEvent) => void;
-    onPlaybackQualityChange?: (event: YT.OnPlaybackQualityChangeEvent) => void;
-    onPlaybackRateChange?: (event: YT.OnPlaybackRateChangeEvent) => void;
-    onApiChange?: (event: YT.OnApiChangeEvent) => void;
+    onReady?: (event: YT.PlayerEvent) => void;
+    onError?: (event: YT.PlayerEvent) => void;
+    onStateChange?: (event: YT.PlayerEvent) => void;
+    onPlaybackQualityChange?: (event: YT.PlayerEvent) => void;
+    onPlaybackRateChange?: (event: YT.PlayerEvent) => void;
+    onApiChange?: (event: YT.PlayerEvent) => void;
 }
 
 export interface YouTubePlayerOptions {
@@ -48,88 +52,98 @@ export class YouTubePlayer {
             return;
         }
 
-        if (!document.getElementById('youtube-api')) {
-            // Add a protocol check to handle both http and https
-            const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            
-            const tag = document.createElement('script');
-            tag.id = 'youtube-api';
-            tag.src = `${protocol}//www.youtube.com/iframe_api`;
-            
-            // Log for debugging
-            console.log(`Loading YouTube API from ${tag.src} with origin ${window.location.origin}`);
-            
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-        }
-
-        // Setup global callback
+        // Load the YouTube IFrame API script
+        const tag = document.createElement('script');
+        tag.id = 'youtube-iframe-api';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        
+        // Save the current callback if it exists
+        const previousOnYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady;
+        
+        // Set up our callback
         window.onYouTubeIframeAPIReady = () => {
+            if (previousOnYouTubeIframeAPIReady) {
+                previousOnYouTubeIframeAPIReady();
+            }
             this.initializePlayer();
         };
+
+        // Insert the script
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        if (firstScriptTag && firstScriptTag.parentNode) {
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        } else {
+            document.head.appendChild(tag);
+        }
     }
 
     private initializePlayer(): void {
+        if (typeof window.YT === 'undefined' || !window.YT.Player) {
+            console.error('YouTube Player API not loaded');
+            // Try to load the API if not available
+            this.loadYouTubeAPI();
+            return;
+        }
+
         // Merge default player vars with user-provided options
         const defaultPlayerVars: YT.PlayerVars = {
-            controls: 1, // Show controls per YouTube TOS
-            playsinline: 1,
-            modestbranding: 1,
-            rel: 0,
-            origin: window.location.origin, // Fix cross-origin issues
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
             enablejsapi: 1,
-            widget_referrer: window.location.href
+            fs: 0,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+            showinfo: 0,
+            origin: window.location.origin
         };
         
         const playerVars = this.options.playerVars ? 
             { ...defaultPlayerVars, ...this.options.playerVars } : 
             defaultPlayerVars;
         
-        this.player = new YT.Player(this.containerId, {
-            height: '100%',
-            width: '100%',
-            playerVars: playerVars,
-            events: {
-                onReady: this.onPlayerReady.bind(this),
-                onError: this.onPlayerError.bind(this),
-                onStateChange: this.onPlayerStateChange.bind(this)
+        try {
+            // Create a container if it doesn't exist
+            let container = document.getElementById(this.containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = this.containerId;
+                document.body.appendChild(container);
             }
-        });
+
+            this.player = new window.YT.Player(this.containerId, {
+                height: '100%',
+                width: '100%',
+                playerVars,
+                events: {
+                    'onReady': (event: YT.PlayerEvent) => this.onPlayerReady(event),
+                    'onError': (event: YT.PlayerEvent) => this.onPlayerError(event),
+                    'onStateChange': (event: YT.PlayerEvent) => this.onPlayerStateChange(event)
+                }
+            });
+        } catch (error) {
+            console.error('Failed to initialize YouTube player:', error);
+            throw new Error('Failed to initialize YouTube player');
+        }
     }
 
-    private onPlayerReady(): void {
+    private onPlayerReady(event: YT.PlayerEvent): void {
         this.isReady = true;
+        this.callbacks.onReady?.(event);
         // Process any queued commands
         this.queuedCommands.forEach(cmd => cmd());
         this.queuedCommands = [];
-        
-        if (this.callbacks.onReady) {
-            this.callbacks.onReady();
-        }
     }
 
-    private onPlayerError(event: YT.OnErrorEvent): void {
-        console.error(`[${new Date().toLocaleTimeString('en-CA', { hour12: false })}] Player error: ${event.data}`);
-        if (this.callbacks.onError) {
-            this.callbacks.onError(event);
-        }
+    private onPlayerError(event: YT.PlayerEvent): void {
+        console.error('YouTube Player Error:', event);
+        this.callbacks.onError?.(event);
     }
 
-    private onPlayerStateChange(event: YT.OnStateChangeEvent): void {
-        // Log the state change for debugging
-        const stateNames = {
-            [-1]: 'UNSTARTED',
-            0: 'ENDED',
-            1: 'PLAYING',
-            2: 'PAUSED',
-            3: 'BUFFERING',
-            5: 'VIDEO_CUED'
-        };
-        console.log(`Player state changed to: ${stateNames[event.data as keyof typeof stateNames] || event.data}`);
-        
-        if (this.callbacks.onStateChange) {
-            this.callbacks.onStateChange(event);
-        }
+    private onPlayerStateChange(event: YT.PlayerEvent): void {
+        this.callbacks.onStateChange?.(event);
     }
 
     // Player controls
@@ -265,18 +279,15 @@ export class YouTubePlayer {
     }
 
     // Event callbacks
-    public setOnReadyCallback(callback: () => void): void {
+    public setOnReadyCallback(callback: (event: YT.PlayerEvent) => void): void {
         this.callbacks.onReady = callback;
-        if (this.isReady) {
-            callback();
-        }
     }
 
-    public setOnErrorCallback(callback: (event: YT.OnErrorEvent) => void): void {
+    public setOnErrorCallback(callback: (event: YT.PlayerEvent) => void): void {
         this.callbacks.onError = callback;
     }
 
-    public setOnStateChangeCallback(callback: (event: YT.OnStateChangeEvent) => void): void {
+    public setOnStateChangeCallback(callback: (event: YT.PlayerEvent) => void): void {
         this.callbacks.onStateChange = callback;
     }
 

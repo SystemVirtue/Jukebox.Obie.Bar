@@ -17,7 +17,7 @@ interface PlayerCommand {
 
 interface PlayerStatus {
   type: 'stateChange' | 'ready' | 'error' | 'playerClosed';
-  state?: YT.PlayerState;
+  state?: number; // Using number for YT.PlayerState enum values
   videoId?: string;
   title?: string;
   artist?: string;
@@ -106,7 +106,7 @@ class PlayerWindow {
         this.notifyMainWindow({ type: 'ready', timestamp: Date.now() });
       });
 
-      this.player.setOnErrorCallback((event: YT.OnErrorEvent) => {
+      this.player.setOnErrorCallback((event: YT.PlayerEvent) => {
         console.error('Player error:', event);
         this.updateStatus(`Error: ${event.data}`);
         this.notifyMainWindow({
@@ -116,7 +116,7 @@ class PlayerWindow {
         });
       });
 
-      this.player.setOnStateChangeCallback((event: YT.OnStateChangeEvent) => {
+      this.player.setOnStateChangeCallback((event: YT.PlayerEvent) => {
         this.handlePlayerStateChange(event);
       });
 
@@ -139,7 +139,7 @@ class PlayerWindow {
     }
   }
 
-  private handlePlayerStateChange(event: YT.OnStateChangeEvent): void {
+  private handlePlayerStateChange(event: YT.PlayerEvent): void {
     if (!this.player) return;
     
     const stateNames: Record<number, string> = {
@@ -151,14 +151,14 @@ class PlayerWindow {
       5: 'VIDEO_CUED'
     };
     
-    const state = event.data;
+    const state = event.data as number;
     console.log(`Player state changed to: ${stateNames[state] || state}`);
     
     // Track playback time for recovery
-    if (state === YT.PlayerState.PLAYING) {
+    if (state === 1) { // PLAYING state
       // Start tracking current time periodically
       this.startPlaybackTracking();
-    } else if (state === YT.PlayerState.ENDED) {
+    } else if (state === 0) { // ENDED state
       // Reset tracking when video ends
       this.stopPlaybackTracking();
       this.lastPlaybackTime = 0;
@@ -168,7 +168,7 @@ class PlayerWindow {
     this.updatePlayerState();
     
     // If video ends, save in local storage that it's completed
-    if (state === YT.PlayerState.ENDED && this.currentVideoId) {
+    if (state === 0 && this.currentVideoId) { // ENDED state
       localStorage.setItem(`video_completed_${this.currentVideoId}`, 'true');
     }
     
@@ -243,7 +243,7 @@ class PlayerWindow {
       // Create a status object with all possible properties
       const status: PlayerStatus = {
         type: 'stateChange',
-        state: playerState !== null ? playerState as YT.PlayerState : undefined,
+        state: playerState !== null ? playerState : undefined,
         videoId: videoData?.video_id,
         title: videoData?.title,
         artist: videoData?.author,
@@ -478,7 +478,7 @@ class PlayerWindow {
       case ' ': // Space to play/pause
         if (this.player) {
           const state = this.player.getPlayerState();
-          if (state === YT.PlayerState.PLAYING) {
+          if (state === 1) { // PLAYING state
             this.player.pauseVideo();
           } else {
             this.player.playVideo();

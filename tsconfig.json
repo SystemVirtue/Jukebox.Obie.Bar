@@ -1,34 +1,32 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ES2020",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./public/dist",
-    "rootDir": "./src",
+    "module": "ESNext",
     "moduleResolution": "node",
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "*": ["*"]
+      "*": ["node_modules/*", "src/types/*"]
     },
-    "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "typeRoots": [
       "./node_modules/@types",
       "./src/types"
     ],
     "types": ["node"],
-    "allowJs": true,
-    "checkJs": false,
-    "resolveJsonModule": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "outDir": "dist",
+    "rootDir": "src",
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/dist", "coverage", "public"]
+  "exclude": ["node_modules", "dist"]
 }
