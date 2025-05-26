@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import * as React from 'react';
+const { useState, useRef, useEffect } = React;
 import { SearchButton } from './SearchButton';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { SearchResults } from './SearchResults';
@@ -9,12 +10,36 @@ import { SecurityConfig } from '../config/security.config';
 import './SearchContainer.css';
 import './MainUI.css';
 
-export const SearchContainer: React.FC<{ onSelectVideo: (videoId: string) => void }> = ({ onSelectVideo }) => {
-  const [neonOpacity, setNeonOpacity] = useState(0);
-  // ...existing state hooks...
+interface SearchContainerProps {
+  onSelectVideo: (videoId: string) => void;
+}
 
+export const SearchContainer = ({ onSelectVideo }: SearchContainerProps): React.ReactElement => {
+  // State for UI
+  // UI State
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showKeyboard, setShowKeyboard] = useState<boolean>(false);
+  
+  // Admin & Credits State
+  const [showAdminOverlay, setShowAdminOverlay] = useState<boolean>(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
+  const [availableCredits, setAvailableCredits] = useState<number>(0);
+  const [creditsRequired, setCreditsRequired] = useState<number>(1);
+  const [insufficientCredits, setInsufficientCredits] = useState<boolean>(false);
+  
+  // Refs
+  const inputRef = useRef<HTMLInputElement>(null);
+  const adminIframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Neon animation state
+  const [neonOpacity, setNeonOpacity] = useState<number>(0);
+  const [neonTransition, setNeonTransition] = useState<string>('opacity 1.5s linear');
   // Neon animation effect
-  const [neonTransition, setNeonTransition] = useState('opacity 1.5s linear');
   useEffect(() => {
     let running = true;
     let timeout: NodeJS.Timeout;
@@ -45,19 +70,6 @@ export const SearchContainer: React.FC<{ onSelectVideo: (videoId: string) => voi
       clearTimeout(timeout);
     };
   }, []);
-
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showAdminOverlay, setShowAdminOverlay] = useState(false);
-  const [creditsRequired, setCreditsRequired] = useState(1);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [availableCredits, setAvailableCredits] = useState(0);
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
-  const adminIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const handleSearchClick = () => {
     setIsSearching(true);

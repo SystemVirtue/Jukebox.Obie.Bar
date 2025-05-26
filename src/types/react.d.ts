@@ -1,6 +1,152 @@
 import * as React from 'react';
 
 declare global {
+  // Add global JSX namespace
+  namespace JSX {
+    interface Element extends React.ReactElement {}
+    interface ElementClass {
+      render(): React.ReactNode;
+    }
+    interface ElementAttributesProperty {
+      props: {};
+    }
+    interface ElementChildrenAttribute {
+      children: {};
+    }
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+  // React types
+  namespace React {
+    // Basic types
+    type ReactNode = ReactElement | string | number | ReactFragment | ReactPortal | boolean | null | undefined;
+    type ReactElement<P = any, T extends string | JSXElementConstructor<any> = string | JSXElementConstructor<any>> = {
+      type: T;
+      props: P;
+      key: Key | null;
+    };
+    type ComponentType<P = {}> = ComponentClass<P> | FunctionComponent<P>;
+    type Key = string | number;
+    type Ref<T> = { bivarianceHack(instance: T | null): void }['bivarianceHack'] | RefObject<T> | null;
+    type RefObject<T> = { readonly current: T | null };
+    
+    // Component types
+    interface FunctionComponent<P = {}> {
+      (props: P, context?: any): ReactElement<any, any> | null;
+      propTypes?: any;
+      contextTypes?: any;
+      defaultProps?: Partial<P>;
+      displayName?: string;
+    }
+    
+    type FC<P = {}> = FunctionComponent<P>;
+    
+    interface ComponentClass<P = {}, S = any> {
+      new (props: P, context?: any): Component<P, S>;
+      propTypes?: any;
+      contextTypes?: any;
+      childContextTypes?: any;
+      defaultProps?: Partial<P>;
+      displayName?: string;
+    }
+
+    // React fragments and portals
+    type ReactFragment = {} | ReactNodeArray;
+    interface ReactNodeArray extends Array<ReactNode> {}
+    type ReactPortal = {
+      key: Key | null;
+      children: ReactNode;
+    };
+    
+    // Component base class
+    class Component<P = {}, S = {}, SS = any> {
+      constructor(props: P, context?: any);
+      setState<K extends keyof S>(
+        state: ((prevState: Readonly<S>, props: Readonly<P>) => (Pick<S, K> | S | null)) | (Pick<S, K> | S | null),
+        callback?: () => void
+      ): void;
+      forceUpdate(callback?: () => void): void;
+      render(): ReactNode;
+      readonly props: Readonly<P> & Readonly<{ children?: ReactNode }>;
+      state: Readonly<S>;
+      context: any;
+      refs: {
+        [key: string]: ReactInstance
+      };
+    }
+    // Hooks
+    type DependencyList = ReadonlyArray<any>;
+    type EffectCallback = () => void | (() => void);
+    
+    function useState<S>(initialState: S | (() => S)): [S, (newState: S | ((prevState: S) => S)) => void];
+    function useEffect(effect: EffectCallback, deps?: DependencyList): void;
+    function useRef<T = undefined>(): MutableRefObject<T | undefined>;
+    function useRef<T>(initialValue: T): MutableRefObject<T>;
+    function useRef<T = undefined>(): MutableRefObject<T | undefined>;
+    function useCallback<T extends (...args: any[]) => any>(callback: T, deps: DependencyList): T;
+    function useMemo<T>(factory: () => T, deps: DependencyList | undefined): T;
+    function useContext<T>(context: Context<T>): T;
+    function useReducer<R extends Reducer<any, any>, I>(
+      reducer: R,
+      initializerArg: I,
+      initializer: (arg: I) => ReducerState<R>
+    ): [ReducerState<R>, Dispatch<ReducerAction<R>>];
+    
+    // Context
+    interface Context<T> {
+      Provider: Provider<T>;
+      Consumer: Consumer<T>;
+      displayName?: string;
+    }
+    
+    interface ProviderProps<T> {
+      value: T;
+      children?: ReactNode;
+    }
+    
+    type Provider<T> = FunctionComponent<ProviderProps<T>>;
+    type Consumer<T> = FunctionComponent<ConsumerProps<T>>;
+    
+    interface ConsumerProps<T> {
+      children: (value: T) => ReactNode;
+    }
+    
+    // Refs
+    interface MutableRefObject<T> {
+      current: T;
+    }
+    
+    // Reducer types
+    type Reducer<S, A> = (prevState: S, action: A) => S;
+    type ReducerState<R extends Reducer<any, any>> = R extends Reducer<infer S, any> ? S : never;
+    type ReducerAction<R extends Reducer<any, any>> = R extends Reducer<any, infer A> ? A : never;
+    type Dispatch<A> = (value: A) => void;
+
+    // Strict mode
+    const StrictMode: React.ExoticComponent<{ children?: ReactNode }>;
+    type EffectCallback = () => void | (() => void);
+    type DependencyList = ReadonlyArray<unknown>;
+    
+    // Additional types for compatibility
+    type ReactText = string | number;
+    type ReactChild = ReactElement | ReactText;
+    
+    interface ReactElement<P = any, T extends string | JSXElementConstructor<any> = string | JSXElementConstructor<any>> {
+      type: T;
+      props: P;
+      key: Key | null;
+    }
+    
+    type JSXElementConstructor<P> = (props: P) => ReactElement | null;
+    
+    interface ReactInstance {}
+    
+    // Event types
+    type ReactEventHandler<T = Element> = EventHandler<Event, T>;
+    type EventHandler<E extends Event, T extends Element> = (event: E & { currentTarget: T }) => void;
+  }
+  // Define JSX namespace
   namespace JSX {
     interface IntrinsicElements {
       // HTML elements

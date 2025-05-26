@@ -1,11 +1,11 @@
-import React from 'react';
+import * as React from 'react';
 import './SearchButton.css';
 
 interface SearchButtonProps {
   onClick: () => void;
 }
 
-export const SearchButton: React.FC<SearchButtonProps> = ({ onClick }) => {
+export const SearchButton = ({ onClick }: SearchButtonProps) => {
   return (
     <button 
       className="search-button"
@@ -16,3 +16,5 @@ export const SearchButton: React.FC<SearchButtonProps> = ({ onClick }) => {
     </button>
   );
 };
+
+export default SearchButton;
