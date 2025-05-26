@@ -5,16 +5,36 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 export default defineConfig(({ mode }) => {
   // Load environment variables
   const env = loadEnv(mode, process.cwd(), '');
+  const isProduction = mode === 'production';
   
   return {
     root: 'public',
     publicDir: 'public',
+    base: '/', // Ensure base URL is set correctly for production
     define: {
       'import.meta.env.VITE_YOUTUBE_API_KEY': JSON.stringify(env.VITE_YOUTUBE_API_KEY || ''),
       'window.YOUTUBE_API_KEY': JSON.stringify(env.VITE_YOUTUBE_API_KEY || '')
     },
+    build: {
+      outDir: '../dist',
+      emptyOutDir: true,
+      sourcemap: !isProduction,
+      minify: isProduction ? 'esbuild' : false,
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'public/index.html')
+        },
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            youtube: ['youtube-player/dist/index'],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    },
     plugins: [
-      basicSsl(),
+      !isProduction && basicSsl(),
       {
         name: 'html-transform',
         transformIndexHtml(html) {
@@ -45,15 +65,6 @@ export default defineConfig(({ mode }) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
         'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
-      }
-    },
-    build: {
-      outDir: 'dist',
-      emptyOutDir: true,
-      rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'public/index.html')
-        }
       }
     }
   };

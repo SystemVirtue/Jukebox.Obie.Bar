@@ -18,6 +18,7 @@
       "./node_modules/@types",
       "./src/types"
     ],
+    "types": ["node"],
     "allowJs": true,
     "checkJs": false,
     "resolveJsonModule": true,
@@ -25,9 +26,8 @@
     "declaration": true,
     "declarationMap": true,
     "moduleDetection": "force",
-    "jsx": "react",
-    "jsxFactory": "React.createElement",
-    "jsxFragmentFactory": "React.Fragment"
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "**/dist", "coverage", "public"]

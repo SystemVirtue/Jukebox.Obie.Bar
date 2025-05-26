@@ -43,6 +43,23 @@ This will:
 - Start a local server on port 3000
 - Auto-reload on changes
 
+## Deployment to Render.com
+
+1. Push your code to a GitHub repository
+2. Go to [Render Dashboard](https://dashboard.render.com/)
+3. Click "New" and select "Web Service"
+4. Connect your GitHub repository
+5. Configure the service:
+   - **Name**: youtube-jukebox
+   - **Region**: Choose the closest region to your users
+   - **Branch**: main (or your preferred branch)
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+   - **Environment Variables**:
+     - `NODE_ENV`: `production`
+     - `VITE_YOUTUBE_API_KEY`: Your YouTube Data API v3 key
+6. Click "Create Web Service"
+
 ## Testing
 
 Run the test suite with:

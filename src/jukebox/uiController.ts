@@ -1,7 +1,7 @@
 import { YouTubePlayer } from '../player/ytPlayer';
 import { PlaylistManager } from '../bgm/playlistManager';
 import { PriorityQueue } from './priorityQueue';
-import { CoinProcessor } from '../hardware/CoinProcessor';
+import { CoinProcessor } from '../hardware';
 import { EventBus } from '../utils/eventBus';
 
 export class UIController {

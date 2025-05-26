@@ -1,7 +1,7 @@
 import { EventBus } from '../utils/eventBus';
 import { YouTubeConfig } from '../config/youtube.config';
 import { SecurityConfig } from '../config/security.config';
-import { CoinProcessor } from '../hardware/CoinProcessor';
+import { CoinProcessor } from '../hardware';
 import { loadOutsideObiePlaylists } from './loadOutsideObiePlaylists';
 
 /**

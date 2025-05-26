@@ -1,4 +1,4 @@
-import { CoinProcessor } from '../hardware/CoinProcessor';
+import { CoinProcessor } from '../hardware';
 import { EventBus } from '../utils/eventBus';
 
 /**

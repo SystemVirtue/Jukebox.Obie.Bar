@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: youtube-jukebox
+    env: node
+    buildCommand: npm install && npm run render-build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
