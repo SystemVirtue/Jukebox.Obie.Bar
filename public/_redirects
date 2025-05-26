@@ -1,0 +1,8 @@
+# Redirects for Render.com and Netlify
+# Specific routes should be listed before fallback routes
+/jukebox /jukebox.html 200
+/player /player.html 200
+/admin/* /admin/index.html 200
+
+# Fallback for everything else
+/* /index.html 200

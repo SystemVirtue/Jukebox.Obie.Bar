@@ -57,7 +57,7 @@
             margin-bottom: 20px;
         }
         
-        .nav-card a {
+        .nav-button {
             display: inline-block;
             background-color: #e50914;
             color: white;
@@ -66,9 +66,12 @@
             border-radius: 4px;
             font-weight: bold;
             transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
         }
         
-        .nav-card a:hover {
+        .nav-button:hover {
             background-color: #f40612;
         }
     </style>
@@ -80,19 +83,19 @@
         <div class="nav-card">
             <h2>Search Kiosk</h2>
             <p>Use the touch kiosk interface to search for artists and songs.</p>
-            <a href="javascript:void(0)" onclick="window.open(window.location.origin + '/jukebox', '_blank')">Open Search Kiosk</a>
+            <button class="nav-button" id="open-kiosk">Open Search Kiosk</button>
         </div>
         
         <div class="nav-card">
             <h2>Player</h2>
             <p>Open the dedicated fullscreen player window for video playback.</p>
-            <a href="javascript:void(0)" onclick="window.open(window.location.origin + '/player.html', '_blank', 'width='+screen.availWidth+',height='+screen.availHeight+',left=0,top=0')">Open Player</a>
+            <button class="nav-button" id="open-player">Open Player</button>
         </div>
         
         <div class="nav-card">
             <h2>Admin Dashboard</h2>
             <p>Access system controls, playlists, and settings.</p>
-            <a href="javascript:void(0)" onclick="window.open(window.location.origin + '/admin/index.html', '_blank')">Open Admin Dashboard</a>
+            <button class="nav-button" id="open-admin">Open Admin Dashboard</button>
         </div>
     </div>
     <script type="module">
@@ -107,6 +110,35 @@
         
         console.log('Global YOUTUBE_API_KEY set:', 
             apiKey ? '***' + String(apiKey).slice(-4) : 'Not found');
+
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup navigation buttons with direct file paths
+            document.getElementById('open-kiosk').addEventListener('click', () => {
+                window.open('./jukebox.html', '_blank');
+            });
+            
+            document.getElementById('open-player').addEventListener('click', () => {
+                const features = [
+                    'popup=yes',
+                    `width=${window.screen.availWidth || 1024}`,
+                    `height=${window.screen.availHeight || 768}`,
+                    'left=0',
+                    'top=0',
+                    'scrollbars=no',
+                    'toolbar=no',
+                    'location=no',
+                    'status=no',
+                    'menubar=no',
+                    'fullscreen=yes'
+                ].join(',');
+                window.open('./player.html', 'YouTubeJukeboxPlayer_' + Date.now(), features);
+            });
+            
+            document.getElementById('open-admin').addEventListener('click', () => {
+                window.open('./admin/index.html', '_blank');
+            });
+        });
     </script>
     <script type="module" src="../src/index.ts"></script>
 </body>

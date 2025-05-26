@@ -22,7 +22,10 @@ export default defineConfig(({ mode }) => {
       minify: isProduction ? 'esbuild' : false,
       rollupOptions: {
         input: {
-          main: resolve(__dirname, 'public/index.html')
+          main: resolve(__dirname, 'public/index.html'),
+          jukebox: resolve(__dirname, 'public/jukebox.html'),
+          player: resolve(__dirname, 'public/player.html'),
+          admin: resolve(__dirname, 'public/admin/index.html')
         },
         output: {
           manualChunks: {
