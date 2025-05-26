@@ -9,12 +9,12 @@ interface SearchResultsProps {
   error?: string | null;
 }
 
-export const SearchResults: React.FC<SearchResultsProps> = ({
+export const SearchResults = ({
   results,
   onSelect,
   isLoading,
   error
-}) => {
+}: SearchResultsProps) => {
   if (isLoading) {
     return (
       <div className="search-results loading">
@@ -43,7 +43,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <div className="search-results">
       <div className="results-grid">
-        {results.map((result, index) => (
+        {results.map((result: SearchResult, index: number) => (
           <div 
             key={`${result.videoId}-${index}`} 
             className="result-item"

@@ -6,7 +6,7 @@ interface VirtualKeyboardProps {
   onClose: () => void;
 }
 
-export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ onSearch, onClose }) => {
+export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => {
   const [input, setInput] = useState('');
   const [showNumbers, setShowNumbers] = useState(false);
 
@@ -14,15 +14,15 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ onSearch, onCl
   const numbers = '0123456789';
 
   const handleKeyPress = (key: string) => {
-    setInput(prev => prev + key);
+    setInput((prev: string) => prev + key);
   };
 
   const handleBackspace = () => {
-    setInput(prev => prev.slice(0, -1));
+    setInput((prev: string) => prev.slice(0, -1));
   };
 
   const handleSpace = () => {
-    setInput(prev => prev + ' ');
+    setInput((prev: string) => prev + ' ');
   };
 
   const handleSearch = () => {

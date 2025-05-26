@@ -1,5 +1,4 @@
-import * as React from 'react';
-const { useState, useRef, useEffect } = React;
+import React, { useState, useRef, useEffect } from 'react';
 import { SearchButton } from './SearchButton';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { SearchResults } from './SearchResults';
@@ -14,7 +13,7 @@ interface SearchContainerProps {
   onSelectVideo: (videoId: string) => void;
 }
 
-export const SearchContainer = ({ onSelectVideo }: SearchContainerProps): React.ReactElement => {
+export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   // State for UI
   // UI State
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -33,8 +32,8 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps): React.
   const [insufficientCredits, setInsufficientCredits] = useState<boolean>(false);
   
   // Refs
-  const inputRef = useRef<HTMLInputElement>(null);
-  const adminIframeRef = useRef<HTMLIFrameElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const adminIframeRef = useRef<HTMLIFrameElement | null>(null);
   
   // Neon animation state
   const [neonOpacity, setNeonOpacity] = useState<number>(0);

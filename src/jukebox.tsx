@@ -11,7 +11,7 @@ import './components/MainUI.css';
 
 // Create a wrapper component that only implements search
 // and passes a no-op function for onSelectVideo to prevent videos from playing in this window
-const JukeboxApp: React.FC = () => {
+const JukeboxApp = () => {
   // This is an intentional no-op function - we don't want videos to play in this window
   const handleSelectVideo = (videoId: string) => {
     console.log('Video selected, but not playing in this window:', videoId);
@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('search-root');
   if (root) {
     createRoot(root).render(
-      <React.StrictMode>
+      <>
         <JukeboxApp />
-      </React.StrictMode>
+      </>
     );
   }
 });
