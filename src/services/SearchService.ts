@@ -31,7 +31,7 @@ export class SearchService {
       // We request more results initially to have a larger pool for client-side filtering.
       const searchUrl = `${this.baseUrl}/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=video&videoCategoryId=10&maxResults=50&key=${this.apiKey}`;
 
-      console.log('[YTJukeBox DEBUG] YouTube API request URL:', searchUrl);
+
       const response = await fetch(searchUrl);
       if (!response.ok) {
         const errorData = await response.json();
@@ -39,12 +39,8 @@ export class SearchService {
       }
 
       const data = await response.json();
-      if (data.items && data.items.length > 0) {
-        console.log('[YTJukeBox DEBUG] First 3 raw YouTube results:', JSON.stringify(data.items.slice(0,3), null, 2));
-      }
-      
+
       if (!data.items || data.items.length === 0) {
-        console.log('[YTJukeBox DEBUG] No items returned from YouTube API.');
         return [];
       }
 
@@ -53,7 +49,7 @@ export class SearchService {
         return officialVideos.slice(0, 20).map(video => this.mapToSearchResult(video));
       } else {
         // Fallback: display general music results if no "official" ones are strongly identified
-        return data.items.slice(0, 20).map(video => this.mapToSearchResult(video));
+        return data.items.slice(0, 20).map((video: { id: { videoId: string; }; snippet: { title: string; channelTitle: string; thumbnails?: { medium?: { url: string; }; default?: { url: string; }; }; }; }) => this.mapToSearchResult(video));
       }
 
     } catch (error) {
@@ -71,7 +67,7 @@ export class SearchService {
     const artistNameLikely = originalQuery.toLowerCase().split(" ")[0]; // Simple assumption
 
     return videos
-      .map(video => {
+      .map((video: any) => {
         let score = 0;
         const titleLower = video.snippet.title.toLowerCase();
         const channelTitleLower = video.snippet.channelTitle.toLowerCase();
@@ -119,18 +115,18 @@ export class SearchService {
           score -= 15;
         }
 
-            const result = this.mapToSearchResult(video);
-            result.officialScore = score;
-            return result;
-        })
-        // Ensure we only keep videos with positive scores
-        .filter(video => video.officialScore !== undefined && video.officialScore > 0)
-        // Sort by score, highest first
-        .sort((a, b) => {
-            const scoreA = a.officialScore ?? 0;
-            const scoreB = b.officialScore ?? 0;
-            return scoreB - scoreA;
-        });
+        // Attach the score to the video object
+        (video as any).officialScore = score;
+        return video;
+      })
+      // Ensure we only keep videos with positive scores
+      .filter((video: any) => video.officialScore !== undefined && video.officialScore > 0)
+      // Sort by score, highest first
+      .sort((a: any, b: any) => {
+        const scoreA = a.officialScore ?? 0;
+        const scoreB = b.officialScore ?? 0;
+        return scoreB - scoreA;
+      });
   }
 
   private mapToSearchResult(item: { id: { videoId: string }, snippet: { title: string, channelTitle: string, thumbnails?: { medium?: { url: string }, default?: { url: string } } } }): SearchResult {
