@@ -58,8 +58,15 @@
   <!-- Load YouTube IFrame API first -->
   <script src="https://www.youtube.com/iframe_api"></script>
   
-  <!-- Then load our compiled player code -->
-  <script src="/dist/player/playerWindow.js" type="module"></script>
+  <!-- Use inline module initialization -->
+  <script type="module">
+    // Import and initialize the player
+    import { PlayerWindow } from '../src/player/playerWindow';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      window.playerInstance = new PlayerWindow();
+    });
+  </script>
   
   <script>
     // Wait for user interaction before attempting fullscreen

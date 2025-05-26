@@ -29,7 +29,7 @@ interface PlayerStatus {
   timestamp: number;
 }
 
-class PlayerWindow {
+export class PlayerWindow {
   private player: YouTubePlayer | null = null;
   private isInitialized: boolean = false;
   private currentVideoId: string | null = null;
@@ -533,9 +533,5 @@ class PlayerWindow {
   }
 }
 
-// Initialize the player when the window loads
-window.addEventListener('load', () => {
-  const playerWindow = new PlayerWindow();
-  // Make globally available for debugging
-  (window as any).playerWindow = playerWindow;
-});
+// This class is now initialized directly from player.html
+// No automatic initialization needed here
