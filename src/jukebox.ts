@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <JukeboxApp />
       </React.StrictMode>
     );
+  }
+});
+        <JukeboxApp />
+      </React.StrictMode>
+    );
   } else {
     console.error('Could not find root element to mount Jukebox App');
   }
