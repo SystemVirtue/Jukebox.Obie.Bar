@@ -1,1 +1,0 @@
-{"version":3,"file":"VirtualKeyboard.d.ts","sourceRoot":"","sources":["../../../src/components/VirtualKeyboard.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAmB,MAAM,OAAO,CAAC;AACxC,OAAO,uBAAuB,CAAC;AAE/B,UAAU,oBAAoB;IAC5B,QAAQ,EAAE,CAAC,KAAK,EAAE,MAAM,KAAK,IAAI,CAAC;IAClC,OAAO,EAAE,MAAM,IAAI,CAAC;CACrB;AAED,eAAO,MAAM,eAAe,EAAE,KAAK,CAAC,EAAE,CAAC,oBAAoB,CA2E1D,CAAC"}

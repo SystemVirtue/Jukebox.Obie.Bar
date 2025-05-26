@@ -1,1 +1,0 @@
-{"version":3,"file":"playerEvents.d.ts","sourceRoot":"","sources":["../../../src/player/playerEvents.ts"],"names":[],"mappings":"AAIA,qBAAa,YAAY;IACX,OAAO,CAAC,YAAY;gBAAZ,YAAY,EAAE,GAAG;IAErC,uBAAuB,CAAC,KAAK,EAAE,GAAG,GAAG,IAAI;IAuBzC,gBAAgB,IAAI,IAAI;IAOxB,eAAe,IAAI,IAAI;IAUvB,YAAY,IAAI,IAAI;IAOpB,aAAa,IAAI,IAAI;CAItB"}
