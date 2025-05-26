@@ -328,11 +328,10 @@ export class CoinProcessor {
         }
         
         // Dispatch to event bus for system-wide logging
-        this.eventBus.emit('system-log', {
+        this.eventBus.emit('hardware-error', {
             source: 'coin-processor',
-            message,
-            timestamp: new Date().toISOString(),
-            level: 'info'
+            code: 'LOG_MESSAGE',
+            message: message
         });
     }
 

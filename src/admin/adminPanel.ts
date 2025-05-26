@@ -27,7 +27,7 @@ class AdminPanel {
         this.updateCreditDisplay(this.coinProcessor.getCredits());
         
         // Setup callback for credit changes
-        this.coinProcessor.setOnCreditCallback((credits) => {
+        this.coinProcessor.setOnCreditCallback((credits: number) => {
             this.updateCreditDisplay(credits);
         });
         
@@ -483,13 +483,17 @@ class AdminPanel {
         
         try {
             // Post message to the jukebox window
-            this.mainJukeboxWindow.postMessage({
-                source: 'admin-dashboard',
-                command,
-                params
-            }, window.location.origin);
-            
-            this.log(`Sent command to jukebox: ${command}`, 'info');
+            if (this.mainJukeboxWindow) {
+                this.mainJukeboxWindow.postMessage({
+                    source: 'admin-dashboard',
+                    command,
+                    params
+                }, window.location.origin);
+                
+                this.log(`Sent command to jukebox: ${command}`, 'info');
+            } else {
+                this.log('Cannot send command: Main jukebox window not available', 'error');
+            }
         } catch (e) {
             this.log(`Error sending command to jukebox: ${e}`, 'error');
             alert('Failed to send command to jukebox.');
@@ -763,7 +767,7 @@ class AdminPanel {
         
         // Set up serial monitoring
         if (this.coinProcessor) {
-            this.coinProcessor.setSerialCallback((message) => {
+            this.coinProcessor.setSerialCallback((message: string) => {
                 this.addSerialLogEntry(message);
             });
         }

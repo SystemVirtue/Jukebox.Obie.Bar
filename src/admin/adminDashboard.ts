@@ -147,7 +147,7 @@ export class AdminDashboard {
     private async rotateApiKey(): Promise<void> {
         try {
             // Remove old key from YouTube config
-            const oldKey = YouTubeConfig.api.key;
+            const oldKey = YouTubeConfig.api.params.key;
             
             // In a real implementation, this would call a secure API to get a new key
             // For now, we'll just simulate the rotation
