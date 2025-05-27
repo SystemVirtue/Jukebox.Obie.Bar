@@ -7,7 +7,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SecurityConfig } from './config/security.config';
-import AdminDashboard from './components/AdminDashboardNew';
+import AdminDashboard from './components/AdminDashboard.tsx';
 import './components/Admin.css';
 import 'bootstrap/dist/css/bootstrap.min.css'; // Ensure Bootstrap is imported
 

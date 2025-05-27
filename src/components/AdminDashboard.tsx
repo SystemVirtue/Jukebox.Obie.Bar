@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminDashboardNew from './AdminDashboardNew';
+import AdminDashboardNew from './AdminDashboardNew.tsx';
 
 export type { 
   LogEntry,

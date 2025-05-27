@@ -28,7 +28,9 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": false,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "allowUmdGlobalAccess": true,
+    "moduleDetection": "force"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
