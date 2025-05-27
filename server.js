@@ -45,8 +45,17 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   
-  // Content Security Policy (will be overridden by meta tags in HTML)
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://www.googleapis.com");
+  // Expanded Content Security Policy to allow YouTube API and other necessary resources
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://www.googleapis.com https://*.ytimg.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "img-src 'self' data: https://*.ytimg.com https://*.youtube.com https://i.ytimg.com; " +
+    "media-src 'self' blob: https://*.youtube.com; " +
+    "frame-src https://www.youtube.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "connect-src 'self' https://www.googleapis.com https://youtube.googleapis.com https://*.ytimg.com"
+  );
   
   next();
 });
@@ -96,6 +105,35 @@ if (!fs.existsSync(indexHtml)) {
   console.log('Created index.html successfully.');
 }
 
+// Copy assets directory to dist if needed
+const assetsDir = path.join(__dirname, 'public', 'assets');
+const distAssetsDir = path.join(distDir, 'assets');
+if (fs.existsSync(assetsDir) && !fs.existsSync(distAssetsDir)) {
+  console.log('Copying assets directory to dist...');
+  // Create assets directory in dist
+  fs.mkdirSync(distAssetsDir, { recursive: true });
+  
+  // Copy all files from assets to dist/assets
+  try {
+    const files = fs.readdirSync(assetsDir);
+    files.forEach(file => {
+      const srcPath = path.join(assetsDir, file);
+      const destPath = path.join(distAssetsDir, file);
+      
+      if (fs.statSync(srcPath).isFile()) {
+        fs.copyFileSync(srcPath, destPath);
+        console.log(`Copied: ${file} to dist/assets`);
+      }
+    });
+    console.log('Assets copied successfully.');
+  } catch (error) {
+    console.error('Error copying assets:', error);
+  }
+}
+
+// Handle assets directory explicitly first
+app.use('/assets', express.static(path.join(distDir, 'assets')));
+
 // Serve static files from the dist directory
 app.use(express.static(distDir));
 
@@ -103,6 +141,17 @@ app.use(express.static(distDir));
 app.get('*', (req, res) => {
   const requestPath = req.path;
   console.log(`Handling request for: ${requestPath}`);
+  
+  // Check if it's an asset request that should be served directly
+  if (requestPath.startsWith('/assets/')) {
+    const assetPath = path.join(distDir, requestPath);
+    if (fs.existsSync(assetPath)) {
+      console.log(`Serving asset: ${assetPath}`);
+      return res.sendFile(assetPath);
+    } else {
+      console.warn(`Asset not found: ${assetPath}`);
+    }
+  }
   
   // Define route mappings
   const routeMappings = {
