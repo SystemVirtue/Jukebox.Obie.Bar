@@ -4,7 +4,7 @@ import { creditsService } from '../services/CreditsService';
 import { playerService } from '../services/PlayerService';
 import { coinTestService } from '../services/CoinTestService';
 import { EventBus } from '../utils/eventBus';
-import { CoinProcessor } from '../hardware';
+import { CoinProcessor, ICoinProcessor, SerialPortInfo } from '../hardware';
 import './Admin.css';
 
 // Add additional CSS styles for the hardware testing tab
@@ -248,7 +248,7 @@ const AdminDashboard = () => {
   // Log state
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
-  const logsContainerRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Serial port state
   const [availablePorts, setAvailablePorts] = useState<SerialPortInfo[]>([]);
@@ -256,7 +256,7 @@ const AdminDashboard = () => {
   const [isRefreshingPorts, setIsRefreshingPorts] = useState(false);
   
   // Reference to the coinProcessor instance
-  const coinProcessorRef = useRef<CoinProcessor | null>(null);
+  const coinProcessorRef = useRef<ICoinProcessor | null>(null);
 
   // Hardware testing methods
   const simulateCoinInsertion = (coinType: 'a' | 'b') => {

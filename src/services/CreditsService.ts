@@ -28,10 +28,11 @@ export class CreditsService {
         // Load credit settings
         this.creditSettings = this.loadCreditSettings();
         
-        // Add startup credits (3) if no credits exist
-        if (this.getCredits() === 0) {
-            this.addStartupCredits();
-        }
+        // IMPORTANT CHANGE: Always reset credits to startup amount (3) for reliability
+        // First, reset any existing credits
+        this.coinProcessor.resetCredits();
+        // Then add the startup credits
+        this.addStartupCredits();
         
         // Set up localStorage event listener for cross-tab/window synchronization
         this.setupCreditsSynchronization();
@@ -79,7 +80,7 @@ export class CreditsService {
     /**
      * Get the coin processor instance for direct hardware access
      */
-    public getCoinProcessor(): CoinProcessor | null {
+    public getCoinProcessor(): ICoinProcessor | null {
         return this.coinProcessor instanceof CoinProcessor ? this.coinProcessor : null;
     }
     

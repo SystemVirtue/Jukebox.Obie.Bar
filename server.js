@@ -60,6 +60,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Special handler for favicon.ico to avoid 404 errors
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
+  if (fs.existsSync(faviconPath)) {
+    return res.sendFile(faviconPath);
+  }
+  res.status(204).end(); // Return no content if favicon doesn't exist
+});
+
 // Set the dist directory for static files
 const distDir = path.join(__dirname, 'dist');
 
