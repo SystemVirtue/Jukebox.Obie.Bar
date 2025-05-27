@@ -9,8 +9,8 @@
     "build:dev": "vite build --mode development",
     "build:watch": "vite build --watch",
     "preview": "vite preview --host 0.0.0.0",
-    "dev": "vite --host 0.0.0.0",
-    "start": "if [ \"$NODE_ENV\" = \"production\" ]; then chmod +x ./render-start.sh && ./render-start.sh; else vite preview --host 0.0.0.0 --port $PORT; fi",
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "start": "node server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "render-build": "tsc --noEmit && vite build"
@@ -56,6 +56,7 @@
     "npm": ">=7.0.0"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "youtube-player": "^5.5.2",
