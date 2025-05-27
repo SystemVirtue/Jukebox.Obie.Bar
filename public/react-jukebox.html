@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Jukebox OBIE/X1 - Search Kiosk</title>
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+  <meta name="description" content="YouTube Jukebox Search Kiosk for finding music videos">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #search-root {
+      height: 1024px;
+      width: 1280px;
+      position: relative;
+      overflow: hidden;
+      background-color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="search-root"></div>
+  <script type="module" src="/src/jukebox.tsx"></script>
+</body>
+</html>

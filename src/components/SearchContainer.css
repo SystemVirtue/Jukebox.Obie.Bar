@@ -13,6 +13,7 @@
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
+  z-index: 1000; /* Ensure it's above background elements */
 }
 
 /* Admin Dashboard Overlay */

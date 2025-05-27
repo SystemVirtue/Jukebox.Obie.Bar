@@ -1,9 +1,10 @@
 .main-ui-background {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 1280px;
+  height: 1024px;
   overflow: hidden;
   background: #111;
+  margin: 0 auto;
 }
 
 .neon-bg,
@@ -20,12 +21,13 @@
   image-rendering: crisp-edges;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  /* Add proper fade transition as requested */
+  transition: opacity 3s ease-in-out;
 }
 
 .neon-fg {
   z-index: 2;
   opacity: 0;
-  transition: opacity 1.5s linear;
 }
 
 .shield-spinner {
@@ -52,13 +54,24 @@
 
 .shield-crest-video {
   position: absolute;
-  top: 0;
+  width: 100%;
   height: 100%;
-  /* Position left edge at right edge of neon images */
-  left: var(--neon-image-width);
-  z-index: 3;
-  object-fit: contain;
+  left: 0;
+  top: 0;
+  object-fit: cover;
+  z-index: 1; /* Lower z-index to ensure it stays behind UI elements */
   /* Ensure the video plays smoothly */
   pointer-events: none;
-  will-change: transform;
+  will-change: opacity;
+  transition: opacity 3s ease-in-out; /* Use 3-second transition as requested */
+}
+
+/* Animation toggle classes */
+.neon-active .shield-crest-video {
+  opacity: 0;
+}
+
+.crest-active .neon-bg,
+.crest-active .neon-fg {
+  opacity: 0 !important;
 }

@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import './VirtualKeyboard.css';
 
 interface VirtualKeyboardProps {
   onSearch: (query: string) => void;
   onClose: () => void;
+  inputRef?: React.RefObject<HTMLInputElement>;
 }
 
-export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => {
+export const VirtualKeyboard = forwardRef<HTMLInputElement, VirtualKeyboardProps>(({ onSearch, onClose, inputRef }, ref) => {
   const [input, setInput] = useState('');
   const [showNumbers, setShowNumbers] = useState(false);
 
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const numbers = '0123456789';
+  // QWERTY layout rows
+  const topRow = 'ABCDEFGHIJKLM';
+  const middleRow = 'NOPQRSTUVWXYZ';
+  const bottomRow = '';
+  const numbers = '1234567890';
 
   const handleKeyPress = (key: string) => {
     setInput((prev: string) => prev + key);
@@ -27,22 +31,72 @@ export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => 
 
   const handleSearch = () => {
     if (input.trim()) {
+      console.log('VirtualKeyboard: Triggering search with query:', input.trim());
+      // Call onSearch but DON'T close the dialog immediately so results can be seen
       onSearch(input.trim());
-      onClose();
+      // Do not call onClose() immediately - let the user see the results
     }
   };
 
   const renderKeys = () => {
-    const keys = showNumbers ? numbers : letters;
-    return keys.split('').map(char => (
-      <button
-        key={char}
-        className="keyboard-key"
-        onClick={() => handleKeyPress(char)}
-      >
-        {char}
-      </button>
-    ));
+    if (showNumbers) {
+      // Render numbers row
+      return numbers.split('').map(char => (
+        <button
+          key={char}
+          className="keyboard-key"
+          onClick={() => handleKeyPress(char)}
+        >
+          {char}
+        </button>
+      ));
+    } else {
+      // Render QWERTY keyboard layout
+      return (
+        <>
+          {/* Top row */}
+          {topRow.split('').map(char => (
+            <button
+              key={char}
+              className="keyboard-key"
+              onClick={() => handleKeyPress(char)}
+            >
+              {char}
+            </button>
+          ))}
+          {/* Add a div to create a new row with a class for proper styling */}
+          <div className="keyboard-row-break"></div>
+          
+          {/* Middle row with offset */}
+          <div className="keyboard-row-spacer"></div>
+          {middleRow.split('').map(char => (
+            <button
+              key={char}
+              className="keyboard-key"
+              onClick={() => handleKeyPress(char)}
+            >
+              {char}
+            </button>
+          ))}
+      <div className="keyboard-row-spacer"></div>
+        {/* Bottom row with offset*/}
+          <div className="keyboard-row-break"></div>
+          <div className="keyboard-row-spacer"></div>
+          <div className="keyboard-row-spacer"></div>
+          {bottomRow.split('').map(char => (
+            <button
+              key={char}
+              className="keyboard-key"
+              onClick={() => handleKeyPress(char)}
+            >
+              {char}
+            </button>
+          ))}
+          <div className="keyboard-row-spacer"></div>
+          <div className="keyboard-row-spacer"></div>
+        </>
+      );
+    }
   };
 
   return (
@@ -54,6 +108,7 @@ export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => 
           readOnly
           className="search-input"
           placeholder="Search artists or songs..."
+          ref={ref || inputRef}
         />
         <button className="close-button" onClick={onClose}>×</button>
       </div>
@@ -63,7 +118,7 @@ export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => 
       </div>
       
       <div className="keyboard-controls">
-        <button className="keyboard-control-btn" onClick={handleBackspace}>BkSp</button>
+        <button className="keyboard-control-btn" onClick={handleBackspace}>Delete</button>
         <button className="keyboard-control-btn" onClick={handleSpace}>Space</button>
         <button 
           className="keyboard-control-btn toggle-btn"
@@ -81,4 +136,4 @@ export const VirtualKeyboard = ({ onSearch, onClose }: VirtualKeyboardProps) => 
       </div>
     </div>
   );
-};
+});

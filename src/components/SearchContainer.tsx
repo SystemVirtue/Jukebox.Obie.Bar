@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SearchButton } from './SearchButton';
-import { VirtualKeyboard } from './VirtualKeyboard';
-import { SearchResults } from './SearchResults';
-import { searchService, SearchResult } from '../services/SearchService';
-import { creditsService } from '../services/CreditsService';
-import { playerService } from '../services/PlayerService';
-import { SecurityConfig } from '../config/security.config';
+import { SearchButton } from './SearchButton.js';
+import { VirtualKeyboard } from './VirtualKeyboard.js';
+import { SearchResults } from './SearchResults.js';
+import { searchService, SearchResult } from '../services/SearchService.js';
+import { creditsService } from '../services/CreditsService.js';
+import { playerService } from '../services/PlayerService.js';
+import { SecurityConfig } from '../config/security.config.js';
 import './SearchContainer.css';
 import './MainUI.css';
 
@@ -23,6 +23,11 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showKeyboard, setShowKeyboard] = useState<boolean>(false);
   
+  // Debug state
+  const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
+  const [debugMessages, setDebugMessages] = useState<string[]>([]);
+  const [filterThreshold, setFilterThreshold] = useState<number>(25); // Default threshold
+  
   // Admin & Credits State
   const [showAdminOverlay, setShowAdminOverlay] = useState<boolean>(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -38,42 +43,126 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   // Neon animation state
   const [neonOpacity, setNeonOpacity] = useState<number>(0);
   const [neonTransition, setNeonTransition] = useState<string>('opacity 1.5s linear');
-  // Neon animation effect
+  // Initialize filter threshold from localStorage
+  useEffect(() => {
+    try {
+      // Check if filterThreshold exists in localStorage
+      const storedThreshold = localStorage.getItem('filterThreshold');
+      console.log('DEBUG - Initial localStorage filterThreshold:', storedThreshold);
+      
+      if (storedThreshold !== null) {
+        const parsedThreshold = parseInt(storedThreshold, 10);
+        console.log('DEBUG - Setting threshold state to:', parsedThreshold);
+        setFilterThreshold(parsedThreshold);
+      } else {
+        // Initialize with default if it doesn't exist
+        console.log('DEBUG - No threshold in localStorage, initializing with default:', filterThreshold);
+        localStorage.setItem('filterThreshold', String(filterThreshold));
+      }
+      
+      // Verify the setting worked
+      console.log('DEBUG - Final localStorage filterThreshold:', localStorage.getItem('filterThreshold'));
+    } catch (e) {
+      console.error('Error accessing localStorage for filter threshold:', e);
+    }
+  }, []);
+  
+  // State to control which animation is showing
+  const [showNeon, setShowNeon] = useState<boolean>(true);
+  // State to control video playback direction
+  const [playingForward, setPlayingForward] = useState<boolean>(true);
+  // Reference to the shield crest video element
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  
+  // Shield crest video playback control - bounce effect
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    const handleTimeUpdate = () => {
+      if (!videoElement) return;
+      
+      // If playing forward and reached near the end
+      if (playingForward && videoElement.currentTime >= videoElement.duration - 0.1) {
+        // Switch to reverse playback
+        videoElement.pause();
+        setPlayingForward(false);
+        // Start playing backward
+        const playBackward = () => {
+          if (!videoElement) return;
+          videoElement.currentTime -= 0.1;
+          if (videoElement.currentTime <= 0.1) {
+            // Reached the beginning, switch back to forward
+            setPlayingForward(true);
+            videoElement.play();
+            return;
+          }
+          requestAnimationFrame(playBackward);
+        };
+        requestAnimationFrame(playBackward);
+      }
+    };
+
+    videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    
+    return () => {
+      if (videoElement) {
+        videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      }
+    };
+  }, [playingForward]);
+
+  // Combined animation effect - alternates between neon and shield crest
   useEffect(() => {
     let running = true;
     let timeout: NodeJS.Timeout;
 
     const animate = () => {
       if (!running) return;
-      const holdTime = Math.random() * 6 + 6; // 6 to 12 sec
-      const fadeInTime = Math.random() * 2.5 + 0.5; // 0.5 to 3.0 sec
-      const fadeOutTime = Math.random() * 2.5 + 0.5; // 0.5 to 3.0 sec
-      const maxOpacity = Math.random() * 0.4 + 0.6; // 0.6 to 1.0
-
-      setNeonTransition(`opacity ${fadeInTime}s linear`);
-      setNeonOpacity(0);
-      setTimeout(() => {
-        setNeonTransition(`opacity ${fadeInTime}s linear`);
-        setNeonOpacity(maxOpacity);
-        setTimeout(() => {
-          setNeonTransition(`opacity ${fadeOutTime}s linear`);
-          setNeonOpacity(0);
-          timeout = setTimeout(animate, holdTime * 1000);
-        }, fadeInTime * 1000);
-      }, holdTime * 1000);
+      
+      // Toggle between showing neon and shield crest
+      setShowNeon(prevShow => {
+        // Log the transition for debugging
+        console.log('Animation switch: changing from', prevShow ? 'neon' : 'shield crest', 'to', !prevShow ? 'neon' : 'shield crest');
+        return !prevShow;
+      });
+      
+      // Toggle between first and second neon regardless of which is showing
+      // This ensures neon is ready when we switch back to it
+      setNeonOpacity(prevOpacity => {
+        return prevOpacity === 0 ? 1 : 0;
+      });
+      
+      // Schedule next animation (every 20 seconds as requested)
+      timeout = setTimeout(animate, 20000);
     };
 
+    // Start animation immediately
     animate();
+    
     return () => {
       running = false;
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
     };
-  }, []);
+  }, []); // Remove dependency on showNeon to prevent infinite loop
 
   const handleSearchClick = () => {
+    // Set UI state to open the search dialog
+    console.log('Search button clicked - opening search dialog');
     setIsSearching(true);
     setSearchResults([]);
     setError(null);
+    
+    // Focus the search input when it appears (in the next render cycle)
+    setTimeout(() => {
+      // Use a safe access pattern with defensive null checking
+      if (inputRef.current) {
+        inputRef.current.focus();
+        console.log('Search input focused');
+      } else {
+        console.warn('Could not focus search input - element not found');
+      }
+    }, 100);
   };
 
   const handleCloseSearch = () => {
@@ -145,6 +234,9 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   }, []);
 
   const handleSearch = async (query: string) => {
+    // DIRECT DEBUG TEST
+    console.log('%c DIRECT DEBUG TEST - Search triggered with query: ' + query, 'background:red; color:white; font-size:16px;');
+    
     if (!query.trim()) return;
     
     // Special case for admin access
@@ -153,19 +245,54 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
       return;
     }
     
-    setIsLoading(true);
-    setError(null);
+    const performSearch = async (query: string) => {
+      setSearchQuery(query);
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Verify filter threshold from localStorage before search
+        const threshold = localStorage.getItem('filterThreshold');
+        console.log('%c Current filter threshold before search: ' + threshold, 'background:blue; color:white; font-size:14px');
+        
+        console.log('%c SearchContainer - Starting search for query: %s', 'background: #222; color: #bada55', query);
+        console.time('Search execution time');
+        
+        // Make sure filter threshold is set before searching
+        if (!threshold) {
+          localStorage.setItem('filterThreshold', String(filterThreshold));
+          console.log('%c Set default filter threshold: ' + filterThreshold, 'background:blue; color:white; font-size:14px');
+        }
+        
+        const results = await searchService.searchMusicVideos(query);
+        
+        console.timeEnd('Search execution time');
+        console.log('%c SearchContainer - Received search results: %d', 'background: #222; color: #bada55', results.length);
+        
+        // Detailed logging of each result for debugging
+        console.group('Search Results Details');
+        results.forEach((result, index) => {
+          console.log(
+            `%c Result #${index + 1}: ${result.title}`, 
+            'color: #4CAF50; font-weight: bold',
+            '\nChannel:', result.channelTitle,
+            '\nVideo ID:', result.videoId,
+            '\nOfficialScore:', result.officialScore || 'N/A'
+          );
+        });
+        console.groupEnd();
+        
+        setSearchResults(results);
+      } catch (err) {
+        console.error('%c Search error:', 'background: #FF5722; color: white', err);
+        setError('Failed to search for videos. Please try again.');
+      } finally {
+        setIsLoading(false);
+        console.log('%c Search process completed', 'background: #222; color: #bada55');
+      }
+    };
     
-    try {
-      const results = await searchService.searchMusicVideos(query);
-      setSearchResults(results);
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('Failed to search for videos. Please try again.');
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
+    performSearch(query);
   };
   
   const openAdminDashboard = () => {
@@ -188,6 +315,11 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   };
 
   const handleVideoSelect = (videoId: string) => {
+    console.log('%c Video selected: %s', 'background: #3F51B5; color: white', videoId);
+    
+    const currentCredits = creditsService.getCredits();
+    console.log('%c Current credits: %d', 'background: #FF9800; color: black', currentCredits);
+    
     // Store the selected video and show confirmation
     setSelectedVideo(videoId);
     setShowConfirmation(true);
@@ -209,6 +341,7 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
       const success = creditsService.deductCredits(creditsRequired);
       
       if (success) {
+        console.log('%c Playing video and deducting credit', 'background: #4CAF50; color: white');
         // Instead of playing the video in this window, open the player window
         playerService.openPlayer();
         // Send the selected video to the player window
@@ -239,12 +372,22 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   };
 
   return (
-    <div className="main-ui-background">
+    <div className={`main-ui-background ${showNeon ? 'neon-active' : 'crest-active'}`}>
       {/* Neon background and foreground */}
       <img src="/assets/Obie_NEON2.png" className="neon-bg" alt="Neon BG" />
       <img src="/assets/Obie_NEON1.png" className="neon-fg" alt="Neon FG" style={{ opacity: neonOpacity, transition: neonTransition }} />
-      {/* Shield Crest Animation 2 */}
-      <video className="shield-crest-video" autoPlay loop muted playsInline>
+      {/* Shield Crest Animation 2 with bounce effect */}
+      <video 
+        ref={videoRef} 
+        className="shield-crest-video" 
+        autoPlay 
+        muted 
+        playsInline
+        style={{ 
+          opacity: showNeon ? 0 : 1, 
+          transition: 'opacity 3s ease-in-out'
+        }}
+      >
         <source src="/assets/Obie_Shield_Crest_Animation2.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
@@ -255,6 +398,18 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
         </div>
       )}
       <div className="search-container">
+      {/* Credits display - positioned at top right */}
+      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.7)', padding: '10px', borderRadius: '5px', zIndex: 1000, color: 'white' }}>
+        {availableCredits > 0 ? (
+          <div style={{ fontSize: '14px' }}>
+            Credit Balance: {availableCredits}
+          </div>
+        ) : (
+          <div style={{ fontSize: '14px' }}>
+            Insert a coin to add credits
+          </div>
+        )}
+      </div>
       <div className="credits-display">
         <span className="credits-label">Credits:</span>
         <span className="credits-value">{availableCredits}</span>
@@ -269,12 +424,72 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
       {!isSearching ? (
         <SearchButton onClick={handleSearchClick} />
       ) : (
-        <div className="search-interface">
-          <VirtualKeyboard 
-            onSearch={handleSearch}
-            onClose={handleCloseSearch}
-          />
-          {(searchResults.length > 0 || isLoading || error) && !showAdminOverlay && !showConfirmation && (
+        <div className="search-interface" style={{ position: 'relative', zIndex: 2000 }}>
+          {/* Show keyboard only if no search results are displayed yet */}
+          {!searchQuery.trim() && (
+            <VirtualKeyboard 
+              onSearch={handleSearch}
+              onClose={handleCloseSearch}
+              inputRef={inputRef}
+            />
+          )}
+          
+          {/* Show Back to Search button when search results are displayed */}
+          {searchQuery.trim() !== '' && !isLoading && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              padding: '10px', 
+              marginBottom: '10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ color: 'white', fontSize: '18px', marginRight: '20px' }}>
+                  Search: "{searchQuery}"
+                </div>
+                {/* Credit balance display */}
+                <div style={{ 
+                  color: 'white', 
+                  fontSize: '14px', 
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  padding: '5px 10px',
+                  borderRadius: '4px'
+                }}>
+                  {availableCredits > 0 ? (
+                    <>Credit Balance: {availableCredits}</>
+                  ) : (
+                    <>Insert a coin to add credits</>
+                  )}
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                style={{
+                  backgroundColor: '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 15px',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 0 #111, 0 5px 5px rgba(0, 0, 0, 0.5)',
+                  position: 'relative',
+                  transform: 'translateY(-2px)',
+                  transition: 'all 0.1s ease'
+                }}
+              >
+                Back to Search
+              </button>
+            </div>
+          )}
+          
+          {/* Only show search results if a search has been attempted or is in progress */}
+          {(searchQuery.trim() !== '' || isLoading) && (
             <SearchResults 
               results={searchResults}
               onSelect={handleVideoSelect}

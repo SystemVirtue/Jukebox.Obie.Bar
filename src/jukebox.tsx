@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SearchContainer } from './components/SearchContainer';
+import { SearchContainer } from './components/SearchContainer.js';
 import './components/MainUI.css';
 
 // Create a wrapper component that only implements search

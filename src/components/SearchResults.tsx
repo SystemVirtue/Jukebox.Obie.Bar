@@ -15,6 +15,19 @@ export const SearchResults = ({
   isLoading,
   error
 }: SearchResultsProps) => {
+  // Function to clean up titles by removing text in brackets and quotes
+  const cleanTitle = (title: string): string => {
+    // Remove text in brackets (both square and round)
+    let cleanedTitle = title.replace(/\[.*?\]|\(.*?\)/g, '');
+    
+    // Remove text in quotes (both single and double)
+    cleanedTitle = cleanedTitle.replace(/["'].*?["']/g, '');
+    
+    // Remove any consecutive spaces and trim
+    cleanedTitle = cleanedTitle.replace(/\s+/g, ' ').trim();
+    
+    return cleanedTitle;
+  };
   if (isLoading) {
     return (
       <div className="search-results loading">
@@ -60,7 +73,7 @@ export const SearchResults = ({
             </div>
             <div className="video-info">
               <h3 className="video-title" title={result.title}>
-                {result.title}
+                {cleanTitle(result.title)}
               </h3>
               <p className="channel-title" title={result.channelTitle}>
                 {result.channelTitle}

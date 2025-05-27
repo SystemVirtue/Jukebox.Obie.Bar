@@ -99,6 +99,39 @@ export class CreditsService {
     }
 
     /**
+     * Add credits (for admin or testing purposes)
+     * @param amount Number of credits to add
+     */
+    public addCredits(amount: number): void {
+        if (amount <= 0) return;
+        
+        const currentCredits = this.getCredits();
+        this.coinProcessor.addCredits(amount);
+        
+        this.log(`Added ${amount} credits through admin panel`);
+        this.eventBus.emit('credits-changed', { 
+            total: this.getCredits(),
+            change: amount,
+            reason: 'admin-add'
+        });
+    }
+    
+    /**
+     * Reset credits to zero (admin function)
+     */
+    public resetCredits(): void {
+        const currentCredits = this.getCredits();
+        this.coinProcessor.resetCredits();
+        
+        this.log(`Reset credits from ${currentCredits} to 0 through admin panel`);
+        this.eventBus.emit('credits-changed', { 
+            total: 0,
+            change: -currentCredits,
+            reason: 'admin-reset'
+        });
+    }
+
+    /**
      * Calculate credit cost for a video
      * This can be adjusted based on premium content, time of day, etc.
      */

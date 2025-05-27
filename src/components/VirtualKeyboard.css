@@ -1,11 +1,11 @@
 .keyboard-container {
   width: 100%;
-  background-color: #f1f1f1;
+  background-color: rgba(0, 0, 0, 0.6); /* Black with 80% opacity */
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.2); /* Black with 80% opacity */
 }
-
 .search-input-container {
   display: flex;
   margin-bottom: 15px;
@@ -16,10 +16,12 @@
   flex: 1;
   padding: 15px;
   font-size: 18px;
-  border: 2px solid #ddd;
+  border: 2px solid #444;
   border-radius: 6px;
   outline: none;
-  background-color: white;
+  background-color: rgba(30, 30, 30, 0.8);
+  color: white; 
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .close-button {
@@ -31,70 +33,146 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: #ddd;
   padding: 0 10px;
+  transition: color 0.2s;
+}
+
+.close-button:hover {
+  color: white;
 }
 
 .keyboard-keys {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  justify-content: center;
+}
+
+.keyboard-row-break {
+  flex-basis: 100%;
+  height: 8px;
+}
+
+.keyboard-row-spacer {
+  width: 18px; /* Adjust based on your key size */
 }
 
 .keyboard-key {
   aspect-ratio: 1;
+  /* Remove fixed width/height to return to previous sizing */
+  flex: 1;
+  min-width: 35px; /* Set minimum width to ensure keys are large enough */
+  min-height: 35px; /* Set minimum height to ensure keys are large enough */
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: white;
-  border: 1px solid #ddd;
+  background-color: #333; /* Dark background */
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 20px; /* Larger font size */
+  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.1s, transform 0.1s;
   user-select: none;
+  position: relative;
+  box-shadow: 0 4px 0 #111, 0 5px 5px rgba(0, 0, 0, 0.5);
+  transition: all 0.1s ease;
+  transform: translateY(-2px);
+  color: white; /* Light text for contrast */
+  border: none;
+}
+
+.keyboard-key::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 1px rgba(23, 58, 0, 0.5),
+              inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
 }
 
 .keyboard-key:active {
-  background-color: #e0e0e0;
-  transform: scale(0.95);
+  box-shadow: 0 0 0 #999, 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+  background-color: #020000a3;
+  color: #f6f8f8;
 }
 
 .keyboard-controls {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .keyboard-control-btn {
   flex: 1;
   padding: 12px 8px;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  background-color: #ddd;
+  transition: all 0.1s ease;
+  background-color: #333 ;
+  position: relative;
+  box-shadow: 0 4px 0 #111, 0 5px 5px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+  color: white;
+  min-height: 50px;
+}
+
+.keyboard-control-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5),
+              inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
 }
 
 .keyboard-control-btn:active {
+  box-shadow: 0 0 0 #999, 0 1px 2px rgba(0, 0, 0, 0.8);
+  transform: translateY(2px);
   background-color: #ccc;
 }
 
 .toggle-btn {
-  background-color: #e0e0e0;
+  background-color: #4a6da7;
+  color: white;
+  box-shadow: 0 4px 0 #2a4d87, 0 5px 5px rgba(0, 0, 0, 0.8);
+}
+
+.toggle-btn:active {
+  background-color: #3a5d97;
+  box-shadow: 0 0 0 #2a4d87, 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .search-btn {
   background-color: #ff0000;
   color: white;
   font-weight: bold;
+  box-shadow: 0 4px 0 #cc0000, 0 5px 5px rgba(0, 0, 0, 0.3);
+}
+
+.search-btn:active {
+  background-color: #e00000;
+  box-shadow: 0 0 0 #cc0000, 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .search-btn:disabled {
   background-color: #ff9999;
+  color: #ffeeee;
+  box-shadow: 0 2px 0 #ffcccc, 0 3px 3px rgba(0, 0, 0, 0.1);
   cursor: not-allowed;
+  transform: translateY(0);
 }
 
 /* Responsive adjustments */
