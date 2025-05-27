@@ -2,7 +2,110 @@ import React, { useState, useEffect } from 'react';
 import { adminService, PlaylistInfo, PlaylistItem } from '../services/AdminService';
 import { creditsService } from '../services/CreditsService';
 import { playerService } from '../services/PlayerService';
+import { coinTestService } from '../services/CoinTestService';
 import './Admin.css';
+
+// Add additional CSS styles for the hardware testing tab
+const hardwareStyles = `
+.hardware-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hardware-status {
+  background-color: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  border-left: 4px solid #3498db;
+}
+
+.hardware-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.initialize-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.initialize-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.coin-simulation {
+  background-color: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.coin-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.coin-button {
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.coin-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dollar-one {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.dollar-two {
+  background-color: #f39c12;
+  color: white;
+}
+
+.coin-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.serial-info {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 4px;
+  border-left: 4px solid #e74c3c;
+}
+
+.serial-info ul {
+  margin-left: 1.5rem;
+}
+
+.serial-info li {
+  margin-bottom: 0.5rem;
+}
+`;
+
+// Add styles to the document
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = hardwareStyles;
+  document.head.appendChild(styleElement);
+}
 
 const AdminDashboard: React.FC = () => {
   // Credits and connection state
@@ -18,6 +121,9 @@ const AdminDashboard: React.FC = () => {
   // Active tab state
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   
+  // Hardware testing state
+  const [serialOutput, setSerialOutput] = useState<string[]>([]);
+  
   // Playlist state
   const [playlists, setPlaylists] = useState<PlaylistInfo[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
@@ -29,6 +135,21 @@ const AdminDashboard: React.FC = () => {
   // Export/Import state
   const [exportData, setExportData] = useState<string>('');
   const [importData, setImportData] = useState<string>('');
+  
+  // Hardware testing methods
+  const simulateCoinInsertion = (coinType: 'a' | 'b') => {
+    coinTestService.simulateCoinInsertion(coinType);
+    // Update local credits state
+    setTimeout(() => {
+      setCredits(creditsService.getCredits());
+    }, 100);
+  };
+
+  const initializeHardwareTest = async () => {
+    const result = await coinTestService.initialize();
+    setCoinProcessorConnected(result);
+    setStatusMessage(result ? 'Hardware test initialized successfully' : 'Hardware test initialization failed');
+  };
   
   // Initialize admin dashboard
   useEffect(() => {
@@ -213,6 +334,12 @@ const AdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('logs')}
         >
           System Logs
+        </button>
+        <button 
+          className={activeTab === 'hardware' ? 'active' : ''} 
+          onClick={() => setActiveTab('hardware')}
+        >
+          Hardware Test
         </button>
       </nav>
       
@@ -449,6 +576,62 @@ const AdminDashboard: React.FC = () => {
                 <span className="log-time">2025-05-27 19:05:22</span>
                 <span className="log-level info">INFO</span>
                 <span className="log-message">Video playback started: xxxxxxxxxxx</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Hardware Testing Tab */}
+        {activeTab === 'hardware' && (
+          <div className="hardware-tab">
+            <h2>Coin Acceptor Hardware Test</h2>
+            
+            <div className="hardware-status">
+              <p>Coin Processor Status: 
+                <span className={coinProcessorConnected ? 'connected' : 'disconnected'}>
+                  {coinProcessorConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </p>
+              <p>Current Credits: <span className="credits-value">{credits}</span></p>
+            </div>
+            
+            <div className="hardware-controls">
+              <button 
+                onClick={initializeHardwareTest} 
+                className="initialize-button"
+                disabled={coinProcessorConnected}
+              >
+                Initialize Coin Processor
+              </button>
+              
+              <div className="coin-simulation">
+                <h3>Simulate Coin Insertion</h3>
+                <div className="coin-buttons">
+                  <button 
+                    onClick={() => simulateCoinInsertion('a')} 
+                    className="coin-button dollar-one"
+                    disabled={!coinProcessorConnected}
+                  >
+                    Insert $1 Coin (a → 1 credit)
+                  </button>
+                  <button 
+                    onClick={() => simulateCoinInsertion('b')} 
+                    className="coin-button dollar-two"
+                    disabled={!coinProcessorConnected}
+                  >
+                    Insert $2 Coin (b → 3 credits)
+                  </button>
+                </div>
+              </div>
+              
+              <div className="serial-info">
+                <h3>Serial Communication Info</h3>
+                <p>The coin acceptor listens for the following serial commands:</p>
+                <ul>
+                  <li><strong>'a'</strong> - $1 coin inserted (adds 1 credit)</li>
+                  <li><strong>'b'</strong> - $2 coin inserted (adds 3 credits)</li>
+                </ul>
+                <p>Communication settings: 9600 baud, 8 data bits, 1 stop bit, no parity</p>
               </div>
             </div>
           </div>
