@@ -48,12 +48,17 @@ export default defineConfig(({ mode }) => {
       }
     ],
     resolve: {
-      extensions: ['.ts', '.tsx', '.js', '.jsx'],
-      alias: {
-        '@': resolve(__dirname, 'src'),
-        '/src': resolve(__dirname, 'src')
-      },
-      extensions: ['.ts', '.js', '.json']
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json'],
+      alias: [
+        { find: '@', replacement: resolve(__dirname, 'src') },
+        { find: '/src', replacement: resolve(__dirname, 'src') }
+      ]
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
+      esbuildOptions: {
+        loader: { '.ts': 'tsx' }
+      }
     },
     server: {
       port: 3000,
