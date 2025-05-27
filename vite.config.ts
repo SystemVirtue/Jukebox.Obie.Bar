@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => {
       }
     ],
     resolve: {
+      extensions: ['.ts', '.tsx', '.js', '.jsx'],
       alias: {
         '@': resolve(__dirname, 'src'),
         '/src': resolve(__dirname, 'src')
