@@ -28,9 +28,8 @@ export interface PlaylistItem {
 export class AdminService {
   private readonly apiKey: string;
   private readonly baseUrl: string = 'https://www.googleapis.com/youtube/v3';
-  // Updated channel ID options for OutsideObie
-  private readonly outsideObieChannelId: string = 'UCcmCDlPtOv9RsAQM4aSC83A'; // Primary OutsideObie channel ID
-  private readonly outsideObieChannelIdBackup: string = 'UC6QsO0zaIRD8FWUbQiYcQpg'; // Backup OutsideObie channel ID
+  // Use channel username which is more reliable than channel ID
+  private readonly outsideObieUsername: string = 'outsideobie2113'; // OutsideObie channel username
   private readonly maxResults: number = 50; // Max results per API request
   
   // Cache for playlists and items
@@ -48,70 +47,169 @@ export class AdminService {
    * Fetch all playlists from OutsideObie channel
    */
   public async fetchOutsideObiePlaylists(): Promise<PlaylistInfo[]> {
-    let lastError: Error | null = null;
-    const channelIds = [this.outsideObieChannelId, this.outsideObieChannelIdBackup];
-    
-    // Try both channel IDs in case one is incorrect
-    for (const channelId of channelIds) {
-      try {
-        console.log(`Fetching playlists from channel ID: ${channelId}...`);
-        
-        // Build the URL to fetch playlists
-        const url = `${this.baseUrl}/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=${this.maxResults}&key=${this.apiKey}`;
-        
-        // Log the URL being used (without the API key for security)
-        const sanitizedUrl = url.replace(this.apiKey, 'API_KEY_REDACTED');
-        console.log(`Request URL: ${sanitizedUrl}`);
-        
-        // Fetch the playlists
-        const response = await fetch(url);
-        const responseText = await response.text(); // Get raw response for debugging
-        
-        if (!response.ok) {
-          console.error(`Failed response for channel ${channelId}:`, responseText);
-          throw new Error(`Failed to fetch playlists: ${response.status} ${response.statusText}`);
-        }
-        
-        // Parse the response as JSON
-        const data = JSON.parse(responseText);
-        console.log(`Found ${data.items?.length || 0} playlists from channel ID: ${channelId}`);
-        
-        // If no playlists found, try the next channel ID
-        if (!data.items || data.items.length === 0) {
-          console.warn(`No playlists found for channel ID: ${channelId}, will try backup if available`);
-          lastError = new Error(`No playlists found for channel ID: ${channelId}`);
-          continue;
-        }
-        
-        // Process the playlists
-        const playlists: PlaylistInfo[] = (data.items || []).map((item: any) => {
-          const playlist: PlaylistInfo = {
-            id: item.id,
-            title: item.snippet.title,
-            description: item.snippet.description,
-            thumbnailUrl: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
-            itemCount: item.contentDetails?.itemCount || 0
-          };
-          
-          // Cache the playlist
-          this.playlists.set(playlist.id, playlist);
-          
-          return playlist;
-        });
-        
-        // If we got playlists, return them
-        if (playlists.length > 0) {
-          return playlists;
-        }
-      } catch (error) {
-        console.error(`Error fetching playlists from channel ID ${channelId}:`, error);
-        lastError = error instanceof Error ? error : new Error(String(error));
+    try {
+      console.log(`Fetching playlists for channel username: @${this.outsideObieUsername}...`);
+      
+      // First, get the channel ID from the username
+      const channelInfoUrl = `${this.baseUrl}/channels?part=snippet,contentDetails&forUsername=${this.outsideObieUsername}&key=${this.apiKey}`;
+      
+      // Also try with the handle (newer YouTube approach)
+      const channelByHandleUrl = `${this.baseUrl}/search?part=snippet&type=channel&q=${this.outsideObieUsername}&maxResults=1&key=${this.apiKey}`;
+      
+      // First try getting the channel by username
+      console.log('Trying to get channel by username...');
+      let channelId = await this.getChannelIdByUsername();
+      
+      // If that fails, try searching for the channel
+      if (!channelId) {
+        console.log('Username lookup failed, searching for channel instead...');
+        channelId = await this.getChannelIdBySearch();
       }
+      
+      // If we still don't have a channel ID, try a direct public playlist search
+      if (!channelId) {
+        console.log('Channel lookup failed, trying direct playlist search...');
+        return await this.getPlaylistsByDirectSearch();
+      }
+      
+      console.log(`Found channel ID: ${channelId}, fetching playlists...`);
+      
+      // Now that we have the channel ID, get the playlists
+      const playlistsUrl = `${this.baseUrl}/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=${this.maxResults}&key=${this.apiKey}`;
+      
+      // Log the URL being used (without the API key for security)
+      const sanitizedUrl = playlistsUrl.replace(this.apiKey, 'API_KEY_REDACTED');
+      console.log(`Request URL: ${sanitizedUrl}`);
+      
+      // Fetch the playlists
+      const response = await fetch(playlistsUrl);
+      
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed response for channel playlists:`, responseText);
+        throw new Error(`Failed to fetch playlists: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`Found ${data.items?.length || 0} playlists from channel`);
+      
+      // If no playlists found, try direct search as fallback
+      if (!data.items || data.items.length === 0) {
+        console.warn('No playlists found via channel ID, trying direct search...');
+        return await this.getPlaylistsByDirectSearch();
+      }
+      
+      // Process the playlists
+      const playlists: PlaylistInfo[] = (data.items || []).map((item: any) => {
+        const playlist: PlaylistInfo = {
+          id: item.id,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          thumbnailUrl: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+          itemCount: item.contentDetails?.itemCount || 0
+        };
+        
+        // Cache the playlist
+        this.playlists.set(playlist.id, playlist);
+        
+        return playlist;
+      });
+      
+      return playlists;
+    } catch (error) {
+      console.error('Error fetching OutsideObie playlists:', error);
+      throw error;
     }
-    
-    // If we get here, all channel IDs failed
-    console.error('All channel IDs failed to fetch playlists');
-    throw lastError || new Error('Failed to fetch playlists from any channel ID');
+  }
+  
+  /**
+   * Get channel ID by username
+   */
+  private async getChannelIdByUsername(): Promise<string | null> {
+    try {
+      const url = `${this.baseUrl}/channels?part=id&forUsername=${this.outsideObieUsername}&key=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.items && data.items.length > 0) {
+        return data.items[0].id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting channel ID by username:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Get channel ID by search
+   */
+  private async getChannelIdBySearch(): Promise<string | null> {
+    try {
+      // Search for the channel
+      const url = `${this.baseUrl}/search?part=snippet&type=channel&q=${this.outsideObieUsername}&maxResults=1&key=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.items && data.items.length > 0) {
+        return data.items[0].snippet.channelId;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting channel ID by search:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Get playlists by direct search
+   */
+  private async getPlaylistsByDirectSearch(): Promise<PlaylistInfo[]> {
+    try {
+      // Search for playlists directly
+      const url = `${this.baseUrl}/search?part=snippet&type=playlist&q=${this.outsideObieUsername}&maxResults=${this.maxResults}&key=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to search playlists: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`Found ${data.items?.length || 0} playlists via direct search`);
+      
+      // Process the search results
+      const playlists: PlaylistInfo[] = (data.items || []).map((item: any) => {
+        const playlist: PlaylistInfo = {
+          id: item.id.playlistId,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          thumbnailUrl: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+          itemCount: 0 // We don't have this info from search results
+        };
+        
+        // Cache the playlist
+        this.playlists.set(playlist.id, playlist);
+        
+        return playlist;
+      });
+      
+      return playlists;
+    } catch (error) {
+      console.error('Error getting playlists by direct search:', error);
+      throw error;
+    }
   }
   
   /**

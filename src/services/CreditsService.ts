@@ -14,7 +14,9 @@ export class CreditsService {
         dollarOneValue: number;
         dollarTwoValue: number;
         maxCredits: number;
+        startupCredits: number;
     };
+    private _isCoinAcceptorConnected: boolean = false;
 
     private constructor() {
         // Initialize coin processor
@@ -26,8 +28,16 @@ export class CreditsService {
         // Load credit settings
         this.creditSettings = this.loadCreditSettings();
         
+        // Add startup credits (3) if no credits exist
+        if (this.getCredits() === 0) {
+            this.addStartupCredits();
+        }
+        
+        // Set up localStorage event listener for cross-tab/window synchronization
+        this.setupCreditsSynchronization();
+        
         // Log initialization
-        console.log(`[${new Date().toLocaleTimeString('en-CA', { hour12: false })}] Credits Service initialized with ${this.getCredits()} credits`);
+        this.log(`Credits Service initialized with ${this.getCredits()} credits`, 'info');
     }
 
     /**
@@ -48,19 +58,36 @@ export class CreditsService {
             const result = await this.coinProcessor.connect();
             
             if (result) {
-                this.log('Connected to coin acceptor');
+                this._isCoinAcceptorConnected = true;
+                this.log('Connected to coin acceptor', 'success');
                 
                 // Notify about current credits
                 this.handleCreditChange(this.getCredits());
             } else {
+                this._isCoinAcceptorConnected = false;
                 this.log('Failed to connect to coin acceptor', 'error');
             }
             
             return result;
         } catch (error) {
+            this._isCoinAcceptorConnected = false;
             this.log(`Error connecting to coin acceptor: ${error}`, 'error');
             return false;
         }
+    }
+    
+    /**
+     * Get the coin processor instance for direct hardware access
+     */
+    public getCoinProcessor(): CoinProcessor | null {
+        return this.coinProcessor instanceof CoinProcessor ? this.coinProcessor : null;
+    }
+    
+    /**
+     * Check if the coin acceptor is connected
+     */
+    public isCoinAcceptorConnected(): boolean {
+        return this._isCoinAcceptorConnected;
     }
 
     /**
@@ -85,12 +112,18 @@ export class CreditsService {
         const success = this.coinProcessor.deductCredits(amount);
         
         if (success) {
-            this.log(`Deducted ${amount} credits for video selection`);
+            const newTotal = this.getCredits();
+            this.log(`Deducted ${amount} credits for video selection. Remaining: ${newTotal}`);
+            
+            // Emit event for local listeners
             this.eventBus.emit('credits-changed', { 
-                total: this.getCredits(),
+                total: newTotal,
                 change: -amount,
                 reason: 'video-selection'
             });
+            
+            // Sync across tabs/windows using localStorage
+            this.syncCreditsAcrossWindows(newTotal, 'deduct');
         } else {
             this.log(`Insufficient credits: ${this.getCredits()} < ${amount}`, 'error');
         }
@@ -101,19 +134,26 @@ export class CreditsService {
     /**
      * Add credits (for admin or testing purposes)
      * @param amount Number of credits to add
+     * @param source Source of the credit addition
      */
-    public addCredits(amount: number): void {
+    public addCredits(amount: number, source: string = 'admin-panel'): void {
         if (amount <= 0) return;
         
         const currentCredits = this.getCredits();
         this.coinProcessor.addCredits(amount);
+        const newTotal = this.getCredits();
         
-        this.log(`Added ${amount} credits through admin panel`);
+        this.log(`Added ${amount} credits through ${source}. New total: ${newTotal}`);
+        
+        // Emit event for local listeners
         this.eventBus.emit('credits-changed', { 
-            total: this.getCredits(),
+            total: newTotal,
             change: amount,
-            reason: 'admin-add'
+            reason: source
         });
+        
+        // Sync across tabs/windows using localStorage
+        this.syncCreditsAcrossWindows(newTotal, `add-${source}`);
     }
     
     /**
@@ -124,11 +164,16 @@ export class CreditsService {
         this.coinProcessor.resetCredits();
         
         this.log(`Reset credits from ${currentCredits} to 0 through admin panel`);
+        
+        // Emit event for local listeners
         this.eventBus.emit('credits-changed', { 
             total: 0,
             change: -currentCredits,
             reason: 'admin-reset'
         });
+        
+        // Sync across tabs/windows using localStorage
+        this.syncCreditsAcrossWindows(0, 'reset');
     }
 
     /**
@@ -151,17 +196,30 @@ export class CreditsService {
     }
 
     /**
-     * Handle credit changes from the coin processor
+     * Internal handler for credit changes from the coin processor
      */
     private handleCreditChange(credits: number): void {
-        // Notify all callbacks
+        this.notifyCreditsChanged();
+    }
+    
+    /**
+     * Notify all registered callbacks about credit changes
+     */
+    private notifyCreditsChanged(): void {
+        const currentCredits = this.getCredits();
+        
+        // Notify all registered callbacks
         for (const callback of this.creditChangeCallbacks) {
-            callback(credits);
+            try {
+                callback(currentCredits);
+            } catch (error) {
+                this.log(`Error in credit change callback: ${error}`, 'error');
+            }
         }
         
-        // Emit event for the system
+        // Emit event for the system to enable cross-window/tab sync
         this.eventBus.emit('credits-changed', { 
-            total: credits,
+            total: currentCredits,
             change: 0, // Not calculating the change here
             reason: 'update'
         });
@@ -170,7 +228,7 @@ export class CreditsService {
     /**
      * Load credit settings from localStorage
      */
-    private loadCreditSettings(): { dollarOneValue: number; dollarTwoValue: number; maxCredits: number } {
+    private loadCreditSettings(): { dollarOneValue: number; dollarTwoValue: number; maxCredits: number; startupCredits: number } {
         try {
             const savedSettings = localStorage.getItem('jukebox_credit_settings');
             if (savedSettings) {
@@ -184,24 +242,118 @@ export class CreditsService {
         return {
             dollarOneValue: 1,
             dollarTwoValue: 3,
-            maxCredits: 255
+            maxCredits: 255,
+            startupCredits: 3
         };
     }
 
     /**
-     * Log a message with timestamp
+     * Add startup credits to the system
      */
-    private log(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
-        const prefix = level === 'error' ? 'ERROR' : level === 'warning' ? 'WARNING' : 'INFO';
-        console.log(`[${new Date().toLocaleTimeString('en-CA', { hour12: false })}] [${prefix}] Credits: ${message}`);
+    private addStartupCredits(): void {
+        const startupCredits = this.creditSettings.startupCredits;
+        this.coinProcessor.addCredits(startupCredits);
         
-        // For errors, also emit an event
-        if (level === 'error') {
-            this.eventBus.emit('error', {
-                source: 'credits-service',
-                error: message
-            });
+        this.log(`Added ${startupCredits} startup credits`, 'success');
+        
+        // Emit credits-changed event
+        this.eventBus.emit('credits-changed', {
+            total: startupCredits,
+            change: startupCredits,
+            reason: 'startup'
+        });
+        
+        // Notify registered callbacks
+        this.notifyCreditsChanged();
+    }
+    
+    /**
+     * Public method to ensure startup credits are added if credits are 0
+     * Can be called from any component to force a check
+     */
+    public ensureStartupCredits(): void {
+        if (this.getCredits() === 0) {
+            this.log('Ensuring startup credits are applied');
+            this.addStartupCredits();
+        } else {
+            this.log(`No startup credits needed, current balance: ${this.getCredits()}`);
         }
+    }
+
+    /**
+     * Setup cross-window credits synchronization using localStorage
+     */
+    private setupCreditsSynchronization(): void {
+        // Listen for storage changes (for cross-tab/window sync)
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'jukeboxCredits') {
+                try {
+                    const data = JSON.parse(event.newValue || '{}');
+                    if (data.credits !== undefined && data.source) {
+                        // Only update if coming from a different source than this instance
+                        const currentCredits = this.getCredits();
+                        if (currentCredits !== data.credits) {
+                            // Force update the coin processor credits
+                            this.coinProcessor.resetCredits();
+                            this.coinProcessor.addCredits(data.credits);
+                            
+                            // Notify local listeners but don't trigger another sync
+                            this.log(`Credits synchronized from external source (${data.source}): ${data.credits}`);
+                            this.eventBus.emit('credits-changed', {
+                                total: data.credits,
+                                change: data.credits - currentCredits,
+                                reason: 'sync'
+                            });
+                        }
+                    }
+                } catch (error) {
+                    this.log(`Error parsing credits sync data: ${error}`, 'error');
+                }
+            }
+        });
+    }
+
+    /**
+     * Synchronize credits across windows/tabs using localStorage
+     */
+    private syncCreditsAcrossWindows(credits: number, source: string): void {
+        try {
+            localStorage.setItem('jukeboxCredits', JSON.stringify({
+                credits,
+                source,
+                timestamp: Date.now()
+            }));
+        } catch (error) {
+            this.log(`Failed to sync credits across windows: ${error}`, 'error');
+        }
+    }
+
+    /**
+     * Log a message to the console with timestamp and emit a log event
+     */
+    private log(message: string, level: 'info' | 'error' | 'warning' | 'success' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString('en-CA', { hour12: false });
+        const formattedMessage = `[${timestamp}] ${message}`;
+        
+        // Console logging
+        if (level === 'error') {
+            console.error(formattedMessage);
+        } else if (level === 'warning') {
+            console.warn(formattedMessage);
+        } else if (level === 'success') {
+            console.log(`%c${formattedMessage}`, 'color: green; font-weight: bold');
+        } else {
+            console.log(formattedMessage);
+        }
+        
+        // Emit log event for the admin panel to catch
+        this.eventBus.emit('system-log', {
+            time: timestamp,
+            level,
+            message,
+            category: 'credits',
+            formattedMessage
+        });
     }
 }
 

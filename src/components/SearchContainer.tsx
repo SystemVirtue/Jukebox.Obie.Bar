@@ -174,13 +174,22 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
 
   // Monitor credit changes
   useEffect(() => {
-    const handleCreditsChanged = (event: CustomEvent) => {
-      const credits = event.detail?.credits || 0;
+    // Register a direct callback with the CreditsService
+    const handleCreditsChange = (credits: number) => {
+      console.log('Credits changed callback triggered with value:', credits);
       setAvailableCredits(credits);
     };
-
-    // Add event listener for credit changes
-    document.addEventListener('credits-changed', handleCreditsChanged as EventListener);
+    
+    // Register the callback with CreditsService
+    creditsService.onCreditChange(handleCreditsChange);
+    
+    // Also add event listener for credit changes (as a backup method)
+    const handleCreditsChangedEvent = (event: CustomEvent) => {
+      const credits = event.detail?.total || 0;
+      console.log('Credits changed event received with value:', credits);
+      setAvailableCredits(credits);
+    };
+    document.addEventListener('credits-changed', handleCreditsChangedEvent as EventListener);
 
     // Setup keyboard shortcut (Ctrl+P) for opening player
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -190,14 +199,23 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
         handleOpenPlayer();
       }
     };
-    
     document.addEventListener('keydown', handleKeyDown);
 
     // Get initial credit value
-    setAvailableCredits(creditsService.getCredits());
+    const initialCredits = creditsService.getCredits();
+    console.log('Initial credits value from CreditsService:', initialCredits);
+    setAvailableCredits(initialCredits);
+    
+    // If credits are 0, force a check for startup credits
+    if (initialCredits === 0) {
+      console.log('Initial credits are 0, checking for startup credits');
+      // This will trigger the addStartupCredits method if needed
+      creditsService.ensureStartupCredits();
+    }
 
     return () => {
-      document.removeEventListener('credits-changed', handleCreditsChanged as EventListener);
+      // Clean up event listeners
+      document.removeEventListener('credits-changed', handleCreditsChangedEvent as EventListener);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
