@@ -108,34 +108,120 @@ if (!fs.existsSync(indexHtml)) {
 // Copy assets directory to dist if needed
 const assetsDir = path.join(__dirname, 'public', 'assets');
 const distAssetsDir = path.join(distDir, 'assets');
-if (fs.existsSync(assetsDir) && !fs.existsSync(distAssetsDir)) {
-  console.log('Copying assets directory to dist...');
-  // Create assets directory in dist
-  fs.mkdirSync(distAssetsDir, { recursive: true });
-  
-  // Copy all files from assets to dist/assets
-  try {
-    const files = fs.readdirSync(assetsDir);
-    files.forEach(file => {
-      const srcPath = path.join(assetsDir, file);
-      const destPath = path.join(distAssetsDir, file);
-      
-      if (fs.statSync(srcPath).isFile()) {
-        fs.copyFileSync(srcPath, destPath);
-        console.log(`Copied: ${file} to dist/assets`);
-      }
-    });
-    console.log('Assets copied successfully.');
-  } catch (error) {
-    console.error('Error copying assets:', error);
+
+// Function to recursively copy directory
+const copyRecursiveSync = (src, dest) => {
+  const exists = fs.existsSync(src);
+  if (!exists) {
+    console.error(`Source directory does not exist: ${src}`);
+    return;
   }
+
+  // Check if it's a directory
+  const stats = fs.statSync(src);
+  if (stats.isDirectory()) {
+    // Ensure destination exists
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+      console.log(`Created directory: ${dest}`);
+    }
+
+    // Copy each item inside the directory
+    const items = fs.readdirSync(src);
+    items.forEach(item => {
+      const srcPath = path.join(src, item);
+      const destPath = path.join(dest, item);
+      copyRecursiveSync(srcPath, destPath);
+    });
+  } else if (stats.isFile()) {
+    // Copy the file
+    fs.copyFileSync(src, dest);
+    console.log(`Copied file: ${dest}`);
+  }
+};
+
+// Perform asset copying
+console.log('Ensuring assets are available in dist directory...');
+
+// 1. Copy from public/assets to dist/assets
+if (fs.existsSync(assetsDir)) {
+  console.log(`Copying assets from ${assetsDir} to ${distAssetsDir}`);
+  copyRecursiveSync(assetsDir, distAssetsDir);
+} else {
+  console.warn(`Assets directory not found at ${assetsDir}`);
 }
 
-// Handle assets directory explicitly first
-app.use('/assets', express.static(path.join(distDir, 'assets')));
+// 2. Alternative: look for assets in root public directory
+const rootAssetsDir = path.join(__dirname, 'assets');
+if (fs.existsSync(rootAssetsDir)) {
+  console.log(`Copying assets from ${rootAssetsDir} to ${distAssetsDir}`);
+  copyRecursiveSync(rootAssetsDir, distAssetsDir);
+}
+
+// 3. Also check for assets in dist/public/assets (Vite might put them here)
+const viteAssetsDir = path.join(distDir, 'public', 'assets');
+if (fs.existsSync(viteAssetsDir)) {
+  console.log(`Copying assets from ${viteAssetsDir} to ${distAssetsDir}`);
+  copyRecursiveSync(viteAssetsDir, distAssetsDir);
+}
+
+// Log all assets in the dist/assets directory for debugging
+console.log('\nAssets available in dist/assets directory:');
+if (fs.existsSync(distAssetsDir)) {
+  try {
+    const listFilesRecursively = (dir, prefix = '') => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          listFilesRecursively(fullPath, relativePath);
+        } else {
+          console.log(`  - ${relativePath}`);
+        }
+      }
+    };
+    listFilesRecursively(distAssetsDir);
+  } catch (error) {
+    console.error('Error listing assets:', error);
+  }
+} else {
+  console.warn('No assets directory found in dist!');
+}
+
+// Serve assets from multiple possible locations to ensure they're found
+app.use('/assets', (req, res, next) => {
+  const assetPath = req.path;
+  console.log(`Asset request for: ${assetPath}`);
+  
+  // Try multiple potential asset locations in order
+  const potentialLocations = [
+    path.join(distDir, 'assets', assetPath),
+    path.join(distDir, 'assets', assetPath.substring(1)), // Without leading slash
+    path.join(distDir, 'public', 'assets', assetPath),
+    path.join(__dirname, 'public', 'assets', assetPath),
+    path.join(__dirname, 'assets', assetPath),
+  ];
+  
+  // Try each potential location
+  for (const location of potentialLocations) {
+    if (fs.existsSync(location) && fs.statSync(location).isFile()) {
+      console.log(`Asset found at: ${location}`);
+      return res.sendFile(location);
+    }
+  }
+  
+  // If we reach here, asset wasn't found in any location
+  console.warn(`Asset not found: ${assetPath}`);
+  console.warn('Checked locations:', potentialLocations);
+  next();
+});
 
 // Serve static files from the dist directory
 app.use(express.static(distDir));
+
+// Also serve static files from public directory for development
+app.use(express.static(path.join(__dirname, 'public')));
 
 // For any routes not matching a static file, serve appropriate HTML file
 app.get('*', (req, res) => {
