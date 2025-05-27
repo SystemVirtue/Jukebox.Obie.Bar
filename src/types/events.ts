@@ -32,6 +32,13 @@ export interface EventDetail {
         code: string;
         message: string;
     };
+    'system-log': {
+        time: string;
+        level: 'info' | 'error' | 'warning' | 'success';
+        message: string;
+        category: string;
+        formattedMessage: string;
+    };
 }
 
 export type EventName = keyof EventDetail;

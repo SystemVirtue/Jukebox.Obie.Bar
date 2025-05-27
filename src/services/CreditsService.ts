@@ -188,12 +188,26 @@ export class CreditsService {
 
     /**
      * Register a callback for credit changes
+     * @returns Unsubscribe function to remove the callback
      */
-    public onCreditChange(callback: (credits: number) => void): void {
+    public onCreditChange(callback: (credits: number) => void): () => void {
         this.creditChangeCallbacks.push(callback);
         
         // Immediately call with current value
         callback(this.getCredits());
+        
+        // Return unsubscribe function
+        return () => this.offCreditChange(callback);
+    }
+    
+    /**
+     * Unregister a credit change callback
+     */
+    public offCreditChange(callback: (credits: number) => void): void {
+        const index = this.creditChangeCallbacks.indexOf(callback);
+        if (index !== -1) {
+            this.creditChangeCallbacks.splice(index, 1);
+        }
     }
 
     /**

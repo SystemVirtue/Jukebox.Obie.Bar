@@ -1,15 +1,28 @@
 // Define the openSearchDialog property on the Window interface
+// Type definitions
 declare global {
     interface Window {
         openSearchDialog: () => void;
     }
 }
 
-import { UIController } from './jukebox/uiController';
-import { AdminDashboard } from './admin/adminDashboard';
-import { SecurityConfig } from './config/security.config';
+// React and core imports
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { SearchResult } from './services/SearchService';
+
+// Component imports
+import AdminDashboard from './components/AdminDashboard';
+
+// Service imports
 import { playerService } from './services/PlayerService';
-import { searchService, SearchResult } from './services/SearchService';
+import { searchService } from './services/SearchService';
+
+// Styles
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+// Configuration
+import { SecurityConfig } from './config/security.config';
 
 // Set up Content Security Policy
 const meta = document.createElement('meta');
@@ -19,10 +32,18 @@ meta.content = Object.entries(SecurityConfig.csp.directives)
     .join('; ');
 document.head.appendChild(meta);
 
-// Initialize the jukebox
+// Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
-    const uiController = new UIController('player-container');
-    const adminDashboard = new AdminDashboard();
+    // Mount the AdminDashboard component
+    const adminRoot = document.getElementById('admin-root');
+    if (adminRoot) {
+        const root = createRoot(adminRoot);
+        root.render(
+            <React.StrictMode>
+                <AdminDashboard />
+            </React.StrictMode>
+        );
+    }
     
     // Add player control button to the UI
     const playerButton = document.createElement('button');

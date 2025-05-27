@@ -6,9 +6,10 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SecurityConfig } from './config/security.config.js';
-import AdminDashboard from './components/AdminDashboard.js';
+import { SecurityConfig } from './config/security.config';
+import AdminDashboard from './components/AdminDashboardNew';
 import './components/Admin.css';
+import 'bootstrap/dist/css/bootstrap.min.css'; // Ensure Bootstrap is imported
 
 // Set up Content Security Policy
 const meta = document.createElement('meta');
