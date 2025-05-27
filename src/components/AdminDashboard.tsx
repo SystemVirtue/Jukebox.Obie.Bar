@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { adminService, PlaylistInfo, PlaylistItem } from '../services/AdminService';
 import { creditsService } from '../services/CreditsService';
 import { playerService } from '../services/PlayerService';
 import { coinTestService } from '../services/CoinTestService';
+import { EventBus } from '../utils/eventBus';
+import { CoinProcessor } from '../hardware';
 import './Admin.css';
 
 // Add additional CSS styles for the hardware testing tab
@@ -47,6 +49,108 @@ const hardwareStyles = `
   padding: 1.5rem;
   border-radius: 4px;
   border: 1px solid #ddd;
+}
+
+.port-selection {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.port-selection select {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: white;
+  font-size: 1rem;
+}
+
+.refresh-ports {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logs-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.log-entry {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: flex-start;
+}
+
+.log-time {
+  color: #7f8c8d;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.log-level {
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+  margin-right: 0.5rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.log-level.info {
+  background-color: #3498db;
+  color: white;
+}
+
+.log-level.warning {
+  background-color: #f39c12;
+  color: white;
+}
+
+.log-level.error {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.log-level.success {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.log-category {
+  color: #8e44ad;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+.log-message {
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.auto-scroll {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.auto-scroll input {
+  margin-right: 0.3rem;
 }
 
 .coin-buttons {
@@ -107,35 +211,53 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleElement);
 }
 
-const AdminDashboard: React.FC = () => {
-  // Credits and connection state
-  const [credits, setCredits] = useState<number>(0);
-  const [coinProcessorConnected, setCoinProcessorConnected] = useState<boolean>(false);
-  const [statusMessage, setStatusMessage] = useState<string>('Initializing...');
+interface LogEntry {
+  time: string;
+  level: 'info' | 'warning' | 'error' | 'success';
+  message: string;
+  category: string;
+  formattedMessage: string;
+}
+
+interface SerialPortInfo {
+  usbVendorId?: number;
+  usbProductId?: number;
+  displayName: string;
+}
+
+const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [credits, setCredits] = useState(0);
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [playedVideos, setPlayedVideos] = useState(0);
+  const [systemUptime, setSystemUptime] = useState('0:00:00');
+  const [coinProcessorConnected, setCoinProcessorConnected] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('System ready');
   
-  // System stats
-  const [activeUsers, setActiveUsers] = useState<number>(0);
-  const [playedVideos, setPlayedVideos] = useState<number>(0);
-  const [systemUptime, setSystemUptime] = useState<string>('0 days, 0 hours');
-  
-  // Active tab state
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  
-  // Hardware testing state
-  const [serialOutput, setSerialOutput] = useState<string[]>([]);
-  
-  // Playlist state
+  // Playlist management state
   const [playlists, setPlaylists] = useState<PlaylistInfo[]>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistInfo | null>(null);
   const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
-  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState<boolean>(false);
-  const [isLoadingItems, setIsLoadingItems] = useState<boolean>(false);
-  const [playlistError, setPlaylistError] = useState<string | null>(null);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   
   // Export/Import state
-  const [exportData, setExportData] = useState<string>('');
-  const [importData, setImportData] = useState<string>('');
+  const [exportData, setExportData] = useState('');
+  const [importData, setImportData] = useState('');
   
+  // Log state
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Serial port state
+  const [availablePorts, setAvailablePorts] = useState<SerialPortInfo[]>([]);
+  const [selectedPort, setSelectedPort] = useState<SerialPortInfo | null>(null);
+  const [isRefreshingPorts, setIsRefreshingPorts] = useState(false);
+  
+  // Reference to the coinProcessor instance
+  const coinProcessorRef = useRef<CoinProcessor | null>(null);
+
   // Hardware testing methods
   const simulateCoinInsertion = (coinType: 'a' | 'b') => {
     coinTestService.simulateCoinInsertion(coinType);
@@ -145,78 +267,205 @@ const AdminDashboard: React.FC = () => {
     }, 100);
   };
 
-  const initializeHardwareTest = async () => {
-    const result = await coinTestService.initialize();
-    setCoinProcessorConnected(result);
-    setStatusMessage(result ? 'Hardware test initialized successfully' : 'Hardware test initialization failed');
-  };
-  
-  // Initialize admin dashboard
-  useEffect(() => {
-    // Try to connect to the coin processor
-    const connectCoinProcessor = async () => {
-      try {
-        const connected = await creditsService.connectCoinAcceptor();
-        setCoinProcessorConnected(connected);
+  const handlePortSelection = async (portIndex: number) => {
+    if (portIndex < 0 || !availablePorts.length) {
+      setSelectedPort(null);
+      return;
+    }
+    
+    const port = availablePorts[portIndex];
+    setSelectedPort(port);
+    
+    // Auto-initialize when a port is selected
+    try {
+      setStatusMessage(`Connecting to ${port.displayName}...`);
+      
+      if (coinProcessorRef.current) {
+        const success = await coinProcessorRef.current.connectToSpecificPort(port);
+        setCoinProcessorConnected(success);
         
-        if (connected) {
-          setStatusMessage('Coin processor connected successfully!');
+        if (success) {
+          setStatusMessage(`Successfully connected to ${port.displayName}`);
         } else {
-          setStatusMessage('Running in simulation mode (no hardware detected)');
+          setStatusMessage(`Failed to connect to ${port.displayName}`);
         }
+      }
+    } catch (error) {
+      console.error('Error connecting to port:', error);
+      setStatusMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const initializeHardwareTest = async () => {
+    try {
+      setStatusMessage('Connecting to coin acceptor...');
+      const success = await creditsService.connectCoinAcceptor();
+      setCoinProcessorConnected(success);
+      
+      if (success) {
+        setStatusMessage('Successfully connected to coin acceptor');
         
-        // Get initial credits
-        const currentCredits = creditsService.getCredits();
-        setCredits(currentCredits);
-      } catch (error) {
-        console.error('Failed to connect to coin processor:', error);
-        setStatusMessage('Error connecting to coin processor');
+        // Refresh the available ports after connection
+        refreshAvailablePorts();
+      } else {
+        setStatusMessage('Failed to connect to coin acceptor');
       }
-    };
+    } catch (error) {
+      console.error('Error initializing hardware test:', error);
+      setStatusMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // Initialize admin dashboard
+  const refreshAvailablePorts = async () => {
+    setIsRefreshingPorts(true);
+    setStatusMessage('Refreshing available serial ports...');
     
-    connectCoinProcessor();
-    
-    // Set up credits change listener
-    const handleCreditsChanged = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && typeof customEvent.detail.credits === 'number') {
-        setCredits(customEvent.detail.credits);
+    try {
+      if (coinProcessorRef.current) {
+        // Call getAvailablePorts which will trigger the ports-list event
+        await coinProcessorRef.current.getAvailablePorts();
+      } else {
+        setStatusMessage('Coin processor not available');
+        setIsRefreshingPorts(false);
       }
-    };
+    } catch (error) {
+      console.error('Error refreshing ports:', error);
+      setStatusMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      setIsRefreshingPorts(false);
+    }
+  };
+
+  useEffect(() => {
+    // Set up subscription to credit changes
+    creditsService.onCreditChange(setCredits);
     
-    document.addEventListener('credits-changed', handleCreditsChanged as EventListener);
+    // Set up subscription to system logs
+    const eventBus = EventBus.getInstance();
+    const logSubscription = eventBus.subscribe('system-log', (logEntry) => {
+      setLogs(prevLogs => {
+        // Keep only the last 500 logs to prevent memory issues
+        const newLogs = [...prevLogs, logEntry];
+        if (newLogs.length > 500) {
+          return newLogs.slice(newLogs.length - 500);
+        }
+        return newLogs;
+      });
+    });
     
-    // Generate mock system stats
-    setActiveUsers(Math.floor(Math.random() * 5) + 1);
-    setPlayedVideos(Math.floor(Math.random() * 100) + 50);
-    const days = Math.floor(Math.random() * 10);
-    const hours = Math.floor(Math.random() * 24);
-    setSystemUptime(`${days} days, ${hours} hours`);
+    // Set up subscription to ports list
+    const portsSubscription = eventBus.subscribe('ports-list', (data) => {
+      setAvailablePorts(data.ports);
+      setIsRefreshingPorts(false);
+    });
     
+    // Initialize demo stats
+    setActiveUsers(Math.floor(Math.random() * 10) + 1);
+    setPlayedVideos(Math.floor(Math.random() * 100) + 10);
+    
+    // Update system uptime
+    const startTime = Date.now();
+    const uptimeInterval = setInterval(() => {
+      const uptime = Math.floor((Date.now() - startTime) / 1000);
+      const hours = Math.floor(uptime / 3600);
+      const minutes = Math.floor((uptime % 3600) / 60);
+      const seconds = uptime % 60;
+      setSystemUptime(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    }, 1000);
+    
+    // Check connection status
+    const connStatus = creditsService.isCoinAcceptorConnected();
+    setCoinProcessorConnected(connStatus);
+    
+    // Initialize coinProcessor reference
+    coinProcessorRef.current = creditsService.getCoinProcessor();
+    
+    // If coin processor is available, load available ports
+    if (coinProcessorRef.current) {
+      refreshAvailablePorts();
+    }
+    
+    // Clean up
     return () => {
-      document.removeEventListener('credits-changed', handleCreditsChanged as EventListener);
+      clearInterval(uptimeInterval);
+      eventBus.unsubscribe(logSubscription);
+      eventBus.unsubscribe(portsSubscription);
     };
   }, []);
+
+  // Auto-scroll logs when new entries arrive
+  useEffect(() => {
+    if (autoScroll && logsContainerRef.current && activeTab === 'logs') {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
+  }, [logs, autoScroll, activeTab]);
   
   // Load OutsideObie playlists
   const loadOutsideObiePlaylists = async () => {
     try {
       setIsLoadingPlaylists(true);
-      setPlaylistError(null);
+      setStatusMessage('Loading playlists from OutsideObie channel...');
+      
+      // Clear any previous playlists and errors
+      setPlaylists([]);
+      setPlaylistItems([]);
+      
+      // Log the attempt
+      const eventBus = EventBus.getInstance();
+      eventBus.emit('system-log', {
+        time: new Date().toLocaleTimeString('en-CA', { hour12: false }),
+        level: 'info',
+        message: 'Attempting to load OutsideObie playlists',
+        category: 'playlists',
+        formattedMessage: 'Attempting to load OutsideObie playlists'
+      });
       
       const playlistsData = await adminService.fetchOutsideObiePlaylists();
-      setPlaylists(playlistsData);
       
-      setStatusMessage(`Successfully loaded ${playlistsData.length} playlists from OutsideObie channel`);
+      if (playlistsData && playlistsData.length > 0) {
+        setPlaylists(playlistsData);
+        
+        // Log success
+        eventBus.emit('system-log', {
+          time: new Date().toLocaleTimeString('en-CA', { hour12: false }),
+          level: 'success',
+          message: `Successfully loaded ${playlistsData.length} playlists from OutsideObie channel`,
+          category: 'playlists',
+          formattedMessage: `Successfully loaded ${playlistsData.length} playlists from OutsideObie channel`
+        });
+        
+        setStatusMessage(`Successfully loaded ${playlistsData.length} playlists from OutsideObie channel`);
+      } else {
+        // Log empty results
+        eventBus.emit('system-log', {
+          time: new Date().toLocaleTimeString('en-CA', { hour12: false }),
+          level: 'warning',
+          message: 'No playlists found for OutsideObie channel',
+          category: 'playlists',
+          formattedMessage: 'No playlists found for OutsideObie channel'
+        });
+        
+        setStatusMessage('No playlists found for OutsideObie channel');
+      }
     } catch (error) {
       console.error('Error loading playlists:', error);
-      setPlaylistError('Failed to load playlists. Check your API key and network connection.');
-      setStatusMessage('Error loading playlists');
+      
+      // Log the error
+      const eventBus = EventBus.getInstance();
+      eventBus.emit('system-log', {
+        time: new Date().toLocaleTimeString('en-CA', { hour12: false }),
+        level: 'error',
+        message: `Error loading playlists: ${error instanceof Error ? error.message : String(error)}`,
+        category: 'playlists',
+        formattedMessage: `Error loading playlists: ${error instanceof Error ? error.message : String(error)}`
+      });
+      
+      setStatusMessage(`Error loading playlists: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoadingPlaylists(false);
     }
   };
-  
+
   // Load items for a specific playlist
   const loadPlaylistItems = async (playlistId: string) => {
     try {
@@ -546,37 +795,40 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'logs' && (
           <div className="logs-tab">
             <h2>System Logs</h2>
-            <div className="logs-container">
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 18:30:15</span>
-                <span className="log-level info">INFO</span>
-                <span className="log-message">System started</span>
-              </div>
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 18:30:17</span>
-                <span className="log-level info">INFO</span>
-                <span className="log-message">Coin processor initialized</span>
-              </div>
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 18:35:22</span>
-                <span className="log-level info">INFO</span>
-                <span className="log-message">Credits updated: 5</span>
-              </div>
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 18:42:10</span>
-                <span className="log-level warning">WARN</span>
-                <span className="log-message">API rate limit approaching</span>
-              </div>
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 19:01:05</span>
-                <span className="log-level info">INFO</span>
-                <span className="log-message">Player window opened</span>
-              </div>
-              <div className="log-entry">
-                <span className="log-time">2025-05-27 19:05:22</span>
-                <span className="log-level info">INFO</span>
-                <span className="log-message">Video playback started: xxxxxxxxxxx</span>
-              </div>
+            <div className="logs-container" ref={logsContainerRef}>
+              {logs.length === 0 ? (
+                <div className="log-entry">
+                  <span className="log-message">No logs available yet</span>
+                </div>
+              ) : (
+                logs.map((log, index) => (
+                  <div className="log-entry" key={index}>
+                    <span className="log-time">{log.time}</span>
+                    <span className={`log-level ${log.level}`}>
+                      {log.level.toUpperCase()}
+                    </span>
+                    <span className="log-category">[{log.category}]</span>
+                    <span className="log-message">{log.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <div className="auto-scroll">
+              <label>
+                <input 
+                  type="checkbox" 
+                  checked={autoScroll} 
+                  onChange={(e) => setAutoScroll(e.target.checked)} 
+                />
+                Auto-scroll to latest logs
+              </label>
+              <button 
+                onClick={() => setLogs([])} 
+                style={{ marginLeft: 'auto' }}
+              >
+                Clear Logs
+              </button>
             </div>
           </div>
         )}
@@ -593,9 +845,35 @@ const AdminDashboard: React.FC = () => {
                 </span>
               </p>
               <p>Current Credits: <span className="credits-value">{credits}</span></p>
+              {coinProcessorConnected && selectedPort && (
+                <p>Connected Port: <strong>{selectedPort.displayName}</strong></p>
+              )}
             </div>
             
             <div className="hardware-controls">
+              <div className="port-selection">
+                <select 
+                  value={availablePorts.findIndex(p => 
+                    selectedPort && p.usbVendorId === selectedPort.usbVendorId && 
+                    p.usbProductId === selectedPort.usbProductId
+                  )}
+                  onChange={(e) => handlePortSelection(parseInt(e.target.value))}
+                  disabled={isRefreshingPorts || !availablePorts.length}
+                >
+                  <option value="-1">-- Select Serial Port --</option>
+                  {availablePorts.map((port, index) => (
+                    <option key={index} value={index}>{port.displayName}</option>
+                  ))}
+                </select>
+                <button 
+                  className="refresh-ports" 
+                  onClick={refreshAvailablePorts}
+                  disabled={isRefreshingPorts}
+                >
+                  {isRefreshingPorts ? 'Refreshing...' : 'Refresh Ports'}
+                </button>
+              </div>
+              
               <button 
                 onClick={initializeHardwareTest} 
                 className="initialize-button"
@@ -633,6 +911,27 @@ const AdminDashboard: React.FC = () => {
                 </ul>
                 <p>Communication settings: 9600 baud, 8 data bits, 1 stop bit, no parity</p>
               </div>
+              
+              {logs.filter(log => log.category === 'coin-processor' || log.category === 'credits').length > 0 && (
+                <div className="hardware-logs">
+                  <h3>Hardware Logs</h3>
+                  <div className="logs-container" style={{ maxHeight: '200px' }}>
+                    {logs
+                      .filter(log => log.category === 'coin-processor' || log.category === 'credits')
+                      .slice(-20)
+                      .map((log, index) => (
+                        <div className="log-entry" key={index}>
+                          <span className="log-time">{log.time}</span>
+                          <span className={`log-level ${log.level}`}>
+                            {log.level.toUpperCase()}
+                          </span>
+                          <span className="log-message">{log.message}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
