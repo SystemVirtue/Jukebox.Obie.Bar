@@ -273,6 +273,13 @@
         </div>
     </div>
     
-    <script type="module" src="../src/admin/adminPanel.ts"></script>
+    <script type="module">
+        // Import and initialize the admin panel
+        import { AdminPanel } from '../../src/admin/adminPanel';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            window.adminPanel = new AdminPanel();
+        });
+    </script>
 </body>
 </html>

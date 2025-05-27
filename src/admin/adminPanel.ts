@@ -8,7 +8,7 @@ import { loadOutsideObiePlaylists } from './loadOutsideObiePlaylists';
  * Admin Panel implementation for YouTube Jukebox X1
  * This class handles all admin dashboard functionality
  */
-class AdminPanel {
+export class AdminPanel {
     private eventBus = EventBus.getInstance();
     private coinProcessor: ICoinProcessor | null = null;
     private activeSection = 'dashboard';
