@@ -27,7 +27,8 @@
     "checkJs": false,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": false,
+    "noEmit": true,
+    "emitDeclarationOnly": true,
     "isolatedModules": true,
     "allowUmdGlobalAccess": true,
     "moduleDetection": "force"
