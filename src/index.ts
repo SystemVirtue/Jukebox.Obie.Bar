@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.addEventListener('click', () => {
                     playerService.openPlayer();
                     playerService.sendCommand({
-                        command: 'play',
+                        action: 'play',
                         videoId: result.videoId
                     });
                     document.body.removeChild(searchContainer); // Close search after selection

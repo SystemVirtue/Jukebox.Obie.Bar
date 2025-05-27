@@ -86,7 +86,7 @@ export class SearchService {
       try {
         const storedThreshold = localStorage.getItem('filterThreshold');
         if (storedThreshold !== null) {
-          threshold = parseInt(storedThreshold, 10);
+          threshold = parseInt(storedThreshold, 2);
         } else {
           // Initialize it if it doesn't exist
           localStorage.setItem('filterThreshold', String(threshold));

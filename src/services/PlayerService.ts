@@ -1,23 +1,24 @@
 interface PlayerCommand {
-  action?: 'play' | 'pause' | 'stop' | 'setVolume' | 'seek';
-  command?: string;
+  action: 'play' | 'pause' | 'stop' | 'setVolume' | 'seek' | 'fadeOut';
   videoId?: string;
   title?: string;
   artist?: string;
   volume?: number;
   time?: number;
-  timestamp?: number;
+  duration?: number;
+  timestamp: number;
 }
 
 interface PlayerStatus {
-  type: 'stateChange' | 'error' | 'playerClosed';
+  type: 'stateChange' | 'error' | 'playerClosed' | 'ready' | 'loading' | 'playing' | 'paused' | 'ended' | 'stopped' | 'fadedOut' | 'volumeSet';
   state?: number | string; // Using number for YT.PlayerState enum values
   error?: string;
   timestamp: number;
 }
 
 export class PlayerService {
-  private static readonly STORAGE_KEY = 'youtube_jukebox_player';
+  private static readonly COMMAND_STORAGE_KEY = 'jukeboxCommand';
+  private static readonly STATUS_STORAGE_KEY = 'jukeboxStatus';
   private playerWindow: Window | null = null;
   private statusCheckInterval: number | null = null;
   private isPlayerOpen = false;
@@ -142,7 +143,7 @@ export class PlayerService {
     };
   }
 
-  public sendCommand(command: PlayerCommand): void {
+  public sendCommand(command: Omit<PlayerCommand, 'timestamp'>): void {
     if (!this.isPlayerOpen || !this.playerWindow) {
       this.openPlayer();
       // Queue the command to be sent after a short delay when the window opens
@@ -151,34 +152,59 @@ export class PlayerService {
     }
 
     try {
+      // Add timestamp to the command
+      const commandWithTimestamp: PlayerCommand = {
+        ...command,
+        timestamp: Date.now()
+      };
+      
+      // Store command in localStorage for the player window to pick up
       localStorage.setItem(
-        PlayerService.STORAGE_KEY,
-        JSON.stringify({
-          ...command,
-          timestamp: Date.now()
-        })
+        PlayerService.COMMAND_STORAGE_KEY,
+        JSON.stringify(commandWithTimestamp)
       );
-      // Force storage event to fire in the same window
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: PlayerService.STORAGE_KEY,
-        newValue: JSON.stringify(command)
-      }));
-    } catch (error) {
-      console.error('Failed to send command to player:', error);
+
+      if (this.playerWindow && !this.playerWindow.closed) {
+        // Ensure the player window is focused
+        this.playerWindow.focus();
+      } else {
+        // If window reference is invalid, reopen it
+        this.handlePlayerClosed();
+      }
+    } catch (e) {
+      console.error('Failed to send command to player:', e);
     }
   }
 
   private setupStorageListener(): void {
     window.addEventListener('storage', (event) => {
-      if (event.key === `${PlayerService.STORAGE_KEY}_status` && event.newValue) {
+      if (event.key === PlayerService.STATUS_STORAGE_KEY && event.newValue) {
         try {
-          const status = JSON.parse(event.newValue) as PlayerStatus;
+          const statusData = JSON.parse(event.newValue);
+          const status: PlayerStatus = {
+            type: statusData.status || 'stateChange',
+            state: statusData.state,
+            error: statusData.errorMessage,
+            timestamp: statusData.timestamp || Date.now()
+          };
+          
+          console.log('Received player status:', status);
+          
           this.lastStatus = status;
           this.statusListeners.forEach(callback => callback(status));
 
-          if (status.type === 'playerClosed') {
+          // Handle player events
+          if (status.type === 'ended' || status.type === 'stopped') {
+            // Queue next video if needed
+            console.log('Video ended or stopped, ready for next video');
+          } else if (status.type === 'error') {
+            console.error('Player reported error:', status.error);
+          } else if (status.type === 'playerClosed') {
             this.handlePlayerClosed();
           }
+          
+          // Clear the status from localStorage after processing
+          localStorage.removeItem(PlayerService.STATUS_STORAGE_KEY);
         } catch (error) {
           console.error('Error parsing player status:', error);
         }

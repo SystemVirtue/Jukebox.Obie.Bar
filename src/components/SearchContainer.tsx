@@ -51,7 +51,7 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
       console.log('DEBUG - Initial localStorage filterThreshold:', storedThreshold);
       
       if (storedThreshold !== null) {
-        const parsedThreshold = parseInt(storedThreshold, 10);
+        const parsedThreshold = parseInt(storedThreshold, 2);
         console.log('DEBUG - Setting threshold state to:', parsedThreshold);
         setFilterThreshold(parsedThreshold);
       } else {
@@ -346,7 +346,7 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
         playerService.openPlayer();
         // Send the selected video to the player window
         playerService.sendCommand({
-          command: 'play',
+          action: 'play',
           videoId: selectedVideo
         });
         
@@ -368,7 +368,15 @@ export const SearchContainer = ({ onSelectVideo }: SearchContainerProps) => {
   };
 
   const handleOpenPlayer = () => {
+    // Open player in a new window
     playerService.openPlayer();
+    
+    // If there's a currently selected video, send it to the player
+    if (selectedVideo) {
+      setTimeout(() => {
+        playerService.playVideo(selectedVideo);
+      }, 1000); // Small delay to ensure player is ready
+    }
   };
 
   return (

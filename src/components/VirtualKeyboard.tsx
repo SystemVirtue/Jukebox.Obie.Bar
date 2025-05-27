@@ -1,13 +1,13 @@
-import React, { useState, forwardRef } from 'react';
+import React, { useState } from 'react';
 import './VirtualKeyboard.css';
 
 interface VirtualKeyboardProps {
   onSearch: (query: string) => void;
   onClose: () => void;
-  inputRef?: React.RefObject<HTMLInputElement>;
+  inputRef?: React.MutableRefObject<HTMLInputElement | null>;
 }
 
-export const VirtualKeyboard = forwardRef<HTMLInputElement, VirtualKeyboardProps>(({ onSearch, onClose, inputRef }, ref) => {
+export const VirtualKeyboard = ({ onSearch, onClose, inputRef }: VirtualKeyboardProps) => {
   const [input, setInput] = useState('');
   const [showNumbers, setShowNumbers] = useState(false);
 
@@ -108,7 +108,7 @@ export const VirtualKeyboard = forwardRef<HTMLInputElement, VirtualKeyboardProps
           readOnly
           className="search-input"
           placeholder="Search artists or songs..."
-          ref={ref || inputRef}
+          ref={inputRef}
         />
         <button className="close-button" onClick={onClose}>×</button>
       </div>
@@ -136,4 +136,4 @@ export const VirtualKeyboard = forwardRef<HTMLInputElement, VirtualKeyboardProps
       </div>
     </div>
   );
-});
+};
