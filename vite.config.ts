@@ -51,8 +51,10 @@ export default defineConfig(({ mode }) => {
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json'],
       alias: [
         { find: '@', replacement: resolve(__dirname, 'src') },
-        { find: '/src', replacement: resolve(__dirname, 'src') }
-      ]
+        { find: '/src', replacement: resolve(__dirname, 'src') },
+        { find: /^~/, replacement: '' }  // Handle imports with ~ prefix
+      ],
+      preserveSymlinks: true
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
