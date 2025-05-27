@@ -6,6 +6,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 // Create Express app
 const app = express();
@@ -13,10 +14,29 @@ const app = express();
 // Define port (use environment variable or default to 10000)
 const PORT = process.env.PORT || 10000;
 
+// Determine environment
+const isProd = process.env.NODE_ENV === 'production';
+
 // Log startup information
 console.log('Starting YouTube Jukebox server...');
-console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+console.log(`Environment: ${isProd ? 'Production' : 'Development'}`);
 console.log(`PORT: ${PORT}`);
+
+// If in development mode, build the project first
+if (!isProd) {
+  const distDir = path.join(__dirname, 'dist');
+  if (!fs.existsSync(distDir)) {
+    console.log('Building project for development...');
+    try {
+      execSync('npm run build', { stdio: 'inherit' });
+      console.log('Build completed successfully.');
+    } catch (error) {
+      console.error('Build failed:', error);
+      process.exit(1);
+    }
+  }
+}
 
 // Security headers middleware
 app.use((req, res, next) => {
