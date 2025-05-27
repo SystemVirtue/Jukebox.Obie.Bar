@@ -61,33 +61,83 @@ if (!fs.existsSync(distDir)) {
   process.exit(1);
 }
 
+// Verify key files exist
+const requiredFiles = [
+  path.join(distDir, 'react-index.html'), 
+  path.join(distDir, 'react-jukebox.html'),
+  path.join(distDir, 'react-player.html'),
+  path.join(distDir, 'admin/react-index.html')
+];
+
+requiredFiles.forEach(file => {
+  if (!fs.existsSync(file)) {
+    console.warn(`Warning: Required file ${file} not found!`);
+  } else {
+    console.log(`Found: ${file}`);
+  }
+});
+
+// Create index.html if it doesn't exist
+const indexHtml = path.join(distDir, 'index.html');
+if (!fs.existsSync(indexHtml)) {
+  console.log('Creating index.html redirect file...');
+  const content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=react-index.html">
+  <title>YouTube Jukebox</title>
+</head>
+<body>
+  <p>Redirecting to <a href="react-index.html">Jukebox</a>...</p>
+</body>
+</html>`;
+  fs.writeFileSync(indexHtml, content);
+  console.log('Created index.html successfully.');
+}
+
 // Serve static files from the dist directory
 app.use(express.static(distDir));
 
-// For any routes not matching a static file, serve index.html
+// For any routes not matching a static file, serve appropriate HTML file
 app.get('*', (req, res) => {
-  // Check if request is for one of our HTML pages
-  const htmlFiles = [
-    '/index.html',
-    '/react-index.html',
-    '/react-jukebox.html',
-    '/react-player.html',
-    '/admin/react-index.html'
-  ];
-  
   const requestPath = req.path;
+  console.log(`Handling request for: ${requestPath}`);
   
-  // Check if this is a direct HTML request
-  if (htmlFiles.includes(requestPath)) {
-    return res.sendFile(path.join(distDir, requestPath));
+  // Define route mappings
+  const routeMappings = {
+    '/': 'index.html',
+    '/index': 'index.html',
+    '/index.html': 'index.html',
+    '/jukebox': 'react-jukebox.html',
+    '/player': 'react-player.html',
+    '/admin': 'admin/react-index.html'
+  };
+  
+  // Check for direct matches first
+  if (routeMappings[requestPath]) {
+    const targetFile = path.join(distDir, routeMappings[requestPath]);
+    console.log(`Serving direct match: ${targetFile}`);
+    return res.sendFile(targetFile);
   }
   
-  // For admin section
+  // Check for HTML file extensions
+  if (requestPath.endsWith('.html')) {
+    const targetFile = path.join(distDir, requestPath.substring(1)); // Remove leading /
+    if (fs.existsSync(targetFile)) {
+      console.log(`Serving HTML file: ${targetFile}`);
+      return res.sendFile(targetFile);
+    }
+  }
+  
+  // Handle admin section
   if (requestPath.startsWith('/admin')) {
+    console.log('Serving admin dashboard');
     return res.sendFile(path.join(distDir, 'admin/react-index.html'));
   }
   
-  // Default to main index
+  // Default to main index for unmatched routes
+  console.log('Serving default index.html');
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
