@@ -9,5 +9,6 @@ if ! command -v serve &> /dev/null; then
 fi
 
 # Start the server
-echo "Starting production server..."
-serve -s dist -l $PORT
+echo "Starting production server on port $PORT..."
+# Explicitly bind to 0.0.0.0 to make it accessible from all network interfaces
+serve -s dist -l "0.0.0.0:$PORT"

@@ -8,9 +8,9 @@
     "build": "tsc && vite build",
     "build:dev": "vite build --mode development",
     "build:watch": "vite build --watch",
-    "preview": "vite preview",
-    "dev": "vite",
-    "start": "if [ \"$NODE_ENV\" = \"production\" ]; then chmod +x ./render-start.sh && ./render-start.sh; else vite preview; fi",
+    "preview": "vite preview --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
+    "start": "if [ \"$NODE_ENV\" = \"production\" ]; then chmod +x ./render-start.sh && ./render-start.sh; else vite preview --host 0.0.0.0 --port $PORT; fi",
     "test": "jest",
     "test:watch": "jest --watch",
     "render-build": "tsc --noEmit && vite build"
